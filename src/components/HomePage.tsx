@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Copy, Trash2, Clock, CalendarDays, Search } from "lucide-react";
 import EmptyStateImg from "@/assets/empty-state.png";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatsHeader } from "@/components/StatsHeader";
 import { api } from "@/lib/api";

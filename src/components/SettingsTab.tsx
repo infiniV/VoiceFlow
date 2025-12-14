@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Globe, Mic, Cpu, Zap, Clock, Palette, FolderOpen, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { Globe, Mic, Cpu, Zap, Clock, Palette, FolderOpen, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Settings, Options } from "@/lib/types";
 import {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Flame, FileText, Type, Settings2, Languages, Cpu, Mic } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import type { Stats, Settings, Options } from "@/lib/types";
+import type { Stats } from "@/lib/types";
 import HeroImg from "@/assets/hero-illustration.png";
 
 type ConfigData = {
