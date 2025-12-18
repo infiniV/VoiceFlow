@@ -7,8 +7,9 @@ Provides:
 - download_model(): Download with progress and cancellation support
 - load_model(): Load already-downloaded model
 - ensure_model_ready(): Download if needed + load
+- get_available_models(): Get list of all supported models
 
-Uses faster_whisper's download_model() which uses huggingface_hub internally.
+Uses faster_whisper's download_model() which handles HuggingFace Hub internally.
 Cache location: ~/.cache/huggingface/hub/
 """
 from dataclasses import dataclass
@@ -23,28 +24,58 @@ from services.logger import get_logger
 log = get_logger("model")
 
 
-# Model sizes in bytes (approximate download sizes)
-# These are estimates based on the quantized int8 CT2 models from faster-whisper
+# All models supported by faster-whisper with approximate download sizes (bytes)
+# Sizes are estimates based on the CTranslate2 converted models
 MODEL_SIZES = {
-    "tiny": 75_000_000,      # ~75 MB
-    "base": 175_000_000,     # ~175 MB
-    "small": 500_000_000,    # ~500 MB
-    "medium": 1_530_000_000, # ~1.53 GB
-    "large-v3": 3_090_000_000,  # ~3.09 GB
-    "turbo": 1_600_000_000,  # ~1.6 GB (large-v3-turbo)
+    # Standard models (multilingual)
+    "tiny": 75_000_000,           # ~75 MB
+    "base": 145_000_000,          # ~145 MB
+    "small": 466_000_000,         # ~466 MB
+    "medium": 1_530_000_000,      # ~1.53 GB
+    "large-v1": 3_090_000_000,    # ~3.09 GB
+    "large-v2": 3_090_000_000,    # ~3.09 GB
+    "large-v3": 3_090_000_000,    # ~3.09 GB
+    "turbo": 1_620_000_000,       # ~1.62 GB (large-v3-turbo)
+    # English-only models (slightly smaller, optimized for English)
+    "tiny.en": 75_000_000,        # ~75 MB
+    "base.en": 145_000_000,       # ~145 MB
+    "small.en": 466_000_000,      # ~466 MB
+    "medium.en": 1_530_000_000,   # ~1.53 GB
+    # Distilled models (faster inference, English-only)
+    "distil-small.en": 332_000_000,    # ~332 MB
+    "distil-medium.en": 756_000_000,   # ~756 MB
+    "distil-large-v2": 1_510_000_000,  # ~1.51 GB
+    "distil-large-v3": 1_510_000_000,  # ~1.51 GB
 }
 
 # Model name to HuggingFace repo ID mapping
-# Most models follow the pattern Systran/faster-whisper-{name}
-# but some (like turbo) are hosted elsewhere
+# Based on faster-whisper's internal mapping
 MODEL_REPOS = {
+    # Standard multilingual models
     "tiny": "Systran/faster-whisper-tiny",
     "base": "Systran/faster-whisper-base",
     "small": "Systran/faster-whisper-small",
     "medium": "Systran/faster-whisper-medium",
+    "large-v1": "Systran/faster-whisper-large-v1",
+    "large-v2": "Systran/faster-whisper-large-v2",
     "large-v3": "Systran/faster-whisper-large-v3",
-    "turbo": "deepdml/faster-whisper-large-v3-turbo-ct2",
+    "turbo": "Systran/faster-whisper-large-v3-turbo",
+    # English-only models
+    "tiny.en": "Systran/faster-whisper-tiny.en",
+    "base.en": "Systran/faster-whisper-base.en",
+    "small.en": "Systran/faster-whisper-small.en",
+    "medium.en": "Systran/faster-whisper-medium.en",
+    # Distilled models
+    "distil-small.en": "Systran/faster-distil-whisper-small.en",
+    "distil-medium.en": "Systran/faster-distil-whisper-medium.en",
+    "distil-large-v2": "Systran/faster-distil-whisper-large-v2",
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
 }
+
+
+def _get_repo_id(model_name: str) -> str:
+    """Get the HuggingFace repo ID for a model name."""
+    return MODEL_REPOS.get(model_name, f"Systran/faster-whisper-{model_name}")
 
 
 @dataclass
@@ -165,61 +196,31 @@ class ModelManager:
     def __init__(self):
         self._download_lock = threading.Lock()
 
-    def get_cache_path(self) -> Path:
-        """Get the huggingface cache directory path."""
-        # huggingface_hub uses this environment variable or default
-        cache_dir = os.environ.get("HF_HOME")
-        if cache_dir:
-            return Path(cache_dir) / "hub"
-
-        # Default cache location
-        return Path.home() / ".cache" / "huggingface" / "hub"
-
-    def _get_repo_id(self, model_name: str) -> str:
-        """Get the HuggingFace repo ID for a model name."""
-        return MODEL_REPOS.get(model_name, f"Systran/faster-whisper-{model_name}")
-
-    def _get_cache_dir_name(self, model_name: str) -> str:
-        """Get the cache directory name for a model (converts repo_id to dir name)."""
-        repo_id = self._get_repo_id(model_name)
-        # HuggingFace converts repo_id like "owner/repo" to "models--owner--repo"
-        return f"models--{repo_id.replace('/', '--')}"
+    def get_available_models(self) -> list:
+        """Get list of all supported model names."""
+        return list(MODEL_SIZES.keys())
 
     def is_model_cached(self, model_name: str) -> bool:
         """
         Check if a model is already downloaded and cached.
 
+        Uses huggingface_hub to check if model exists in cache.
+
         Args:
-            model_name: Name of the model (tiny, base, small, medium, large-v3, turbo)
+            model_name: Name of the model (e.g., tiny, base, small, medium, large-v3, turbo)
 
         Returns:
             True if the model is cached, False otherwise.
         """
         try:
-            cache_path = self.get_cache_path()
-            model_dir_name = self._get_cache_dir_name(model_name)
-            model_path = cache_path / model_dir_name
+            from huggingface_hub import snapshot_download
 
-            if not model_path.exists():
-                return False
-
-            # Check for snapshots directory which contains the actual model files
-            snapshots_dir = model_path / "snapshots"
-            if not snapshots_dir.exists():
-                return False
-
-            # Check if there's at least one snapshot with model files
-            for snapshot in snapshots_dir.iterdir():
-                if snapshot.is_dir():
-                    # Check for model.bin file which is required
-                    model_bin = snapshot / "model.bin"
-                    if model_bin.exists():
-                        return True
-
-            return False
-
-        except Exception as e:
-            log.warning("Error checking model cache", model=model_name, error=str(e))
+            repo_id = _get_repo_id(model_name)
+            # Try to get model path with local_files_only - raises if not cached
+            snapshot_download(repo_id, local_files_only=True)
+            return True
+        except Exception:
+            # Model not found in cache
             return False
 
     def get_model_info(self, model_name: str) -> ModelInfo:
@@ -274,7 +275,7 @@ class ModelManager:
         """
         Internal download implementation.
 
-        Uses huggingface_hub.snapshot_download() with a progress callback.
+        Uses huggingface_hub.snapshot_download() with progress tracking.
         Runs download in a daemon thread so cancellation can abandon it.
 
         Args:
@@ -291,37 +292,60 @@ class ModelManager:
         log.info("Starting model download", model=model_name)
 
         # Get the correct repo ID for this model
-        repo_id = self._get_repo_id(model_name)
+        repo_id = _get_repo_id(model_name)
+        log.info("Downloading from repo", repo_id=repo_id)
 
-        # Track total bytes downloaded across all files
+        # Track progress across all files
         total_size = MODEL_SIZES.get(model_name, 0)
-        downloaded_bytes = [0]  # Use list to allow mutation in nested class
-        start_time = [time.time()]
-        last_update_time = [start_time[0]]
+        progress_state = {
+            "files_total": 0,
+            "files_done": 0,
+            "bytes_downloaded": 0,
+            "bytes_total": 0,  # Actual total from tqdm (more accurate than MODEL_SIZES)
+            "start_time": time.time(),
+            "last_update_time": time.time()
+        }
 
         # Result holder for the download thread
-        result = {"success": False, "error": None}
+        result = {"success": False, "error": None, "model_path": None}
 
         def send_progress():
             """Send progress update to callback."""
             now = time.time()
             # Throttle updates to max 10 per second
-            if now - last_update_time[0] < 0.1:
+            if now - progress_state["last_update_time"] < 0.1:
                 return
-            last_update_time[0] = now
+            progress_state["last_update_time"] = now
 
-            elapsed = now - start_time[0]
-            speed = downloaded_bytes[0] / elapsed if elapsed > 0 else 0
-            remaining = total_size - downloaded_bytes[0]
+            elapsed = now - progress_state["start_time"]
+
+            # Prefer actual byte progress over file count progress
+            # Byte progress is more accurate since model.bin is most of the download
+            if progress_state["bytes_total"] > 0:
+                # Use actual byte progress from tqdm
+                actual_bytes = progress_state["bytes_downloaded"]
+                actual_total = progress_state["bytes_total"]
+                percent = (actual_bytes / actual_total) * 100
+            elif progress_state["files_total"] > 0:
+                # Fall back to file-based progress estimation
+                percent = (progress_state["files_done"] / progress_state["files_total"]) * 100
+                actual_bytes = int((progress_state["files_done"] / progress_state["files_total"]) * total_size)
+                actual_total = total_size
+            else:
+                percent = 0
+                actual_bytes = 0
+                actual_total = total_size
+
+            speed = actual_bytes / elapsed if elapsed > 0 else 0
+            remaining = actual_total - actual_bytes
             eta = remaining / speed if speed > 0 else 0
-            percent = (downloaded_bytes[0] / total_size * 100) if total_size > 0 else 0
 
             try:
                 on_progress(DownloadProgress(
                     model_name=model_name,
                     percent=min(percent, 99.9),  # Cap at 99.9 until truly complete
-                    downloaded_bytes=downloaded_bytes[0],
-                    total_bytes=total_size,
+                    downloaded_bytes=actual_bytes,
+                    total_bytes=actual_total,
                     speed_bps=speed,
                     eta_seconds=eta
                 ))
@@ -329,6 +353,8 @@ class ModelManager:
                 log.warning("Progress callback error", error=str(e))
 
         # Custom tqdm class that tracks download progress
+        # NOTE: huggingface_hub only uses tqdm_class for file-level progress,
+        # not for individual file byte downloads (see https://github.com/huggingface/huggingface_hub/issues/1110)
         class DownloadProgressBar(tqdm_base):
             def __init__(self, *args, **kwargs):
                 # Filter out any unexpected kwargs that tqdm doesn't accept
@@ -336,23 +362,56 @@ class ModelManager:
                 super().__init__(*args, **kwargs)
 
             def update(self, n=1):
+                # Check for cancellation - raise exception to abort download
+                if cancel_token.is_cancelled():
+                    raise DownloadCancelledError("Download cancelled by user")
+
                 super().update(n)
-                # Only count byte updates (not file count updates)
-                # huggingface_hub uses unit="B" for byte progress bars
-                # and unit is absent or different for file count progress
-                if getattr(self, 'unit', None) == 'B' and n > 0:
-                    downloaded_bytes[0] += n
+                unit = getattr(self, 'unit', 'unknown')
+                total = getattr(self, 'total', 0)
+                current_n = getattr(self, 'n', 0)
+
+                # Track file completion progress (unit='it' for iterations)
+                if unit == 'it' and n > 0:
+                    if progress_state["files_total"] == 0 and total > 0:
+                        progress_state["files_total"] = total
+                    progress_state["files_done"] = current_n
+                    send_progress()
+
+                # Track byte-based progress from individual file downloads
+                if n > 0 and unit and 'B' in str(unit):
+                    if total > 0 and progress_state["bytes_total"] == 0:
+                        progress_state["bytes_total"] = total
+                    progress_state["bytes_downloaded"] = current_n
                     send_progress()
 
         def download_thread():
             """Run the download in a separate thread."""
             try:
-                snapshot_download(
+                # Send initial progress to confirm download started
+                log.info("Download thread started", model=model_name, repo_id=repo_id)
+                on_progress(DownloadProgress(
+                    model_name=model_name,
+                    percent=0.1,
+                    downloaded_bytes=0,
+                    total_bytes=total_size,
+                    speed_bps=0,
+                    eta_seconds=0
+                ))
+
+                # Use huggingface_hub directly with our custom tqdm for progress
+                model_path = snapshot_download(
                     repo_id,
                     tqdm_class=DownloadProgressBar,
                 )
                 result["success"] = True
+                result["model_path"] = model_path
+            except DownloadCancelledError:
+                # Expected when user cancels - not an error
+                log.info("Download thread cancelled", model=model_name)
+                result["error"] = "cancelled"
             except Exception as e:
+                log.error("Download thread exception", error=str(e), model=model_name)
                 result["error"] = str(e)
 
         # Start download in daemon thread
@@ -369,7 +428,7 @@ class ModelManager:
 
         # Check result
         if result["success"]:
-            log.info("Model download completed", model=model_name)
+            log.info("Model download completed", model=model_name, path=result["model_path"])
 
             # Send final 100% progress
             on_progress(DownloadProgress(
@@ -403,12 +462,11 @@ class ModelManager:
 
         from faster_whisper import WhisperModel
 
-        # Use repo_id for non-standard models (like turbo from deepdml)
-        model_id = self._get_repo_id(model_name)
-
-        log.info("Loading model", model=model_name, repo_id=model_id)
+        # Use repo_id for loading to ensure correct model is loaded
+        repo_id = _get_repo_id(model_name)
+        log.info("Loading model", model=model_name, repo_id=repo_id)
         model = WhisperModel(
-            model_id,
+            repo_id,
             device="cpu",
             compute_type="int8"
         )

@@ -8,9 +8,9 @@ from services.model_manager import MODEL_REPOS
 log = get_logger("model")
 
 
-def _get_model_id(model_name: str) -> str:
+def _get_repo_id(model_name: str) -> str:
     """Get the HuggingFace repo ID for a model name."""
-    return MODEL_REPOS.get(model_name, model_name)
+    return MODEL_REPOS.get(model_name, f"Systran/faster-whisper-{model_name}")
 
 
 class TranscriptionService:
@@ -28,12 +28,10 @@ class TranscriptionService:
 
             self._loading = True
             try:
-                # Get the correct model ID (repo ID for non-standard models)
-                model_id = _get_model_id(model_name)
-
-                # Use CPU for broader compatibility, can add CUDA support later
+                # Use repo_id for loading
+                repo_id = _get_repo_id(model_name)
                 self._model = WhisperModel(
-                    model_id,
+                    repo_id,
                     device="cpu",
                     compute_type="int8",  # Faster on CPU
                 )

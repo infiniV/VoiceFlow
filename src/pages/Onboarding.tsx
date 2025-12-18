@@ -13,6 +13,9 @@ import {
   Sparkles,
   Keyboard,
   Download,
+  Target,
+  HardDrive,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,8 +32,10 @@ import { api } from "@/lib/api";
 import type { Settings, Options } from "@/lib/types";
 import {
   MODEL_OPTIONS,
+  MODEL_CATEGORIES,
   THEME_OPTIONS,
   ONBOARDING_FEATURES,
+  isEnglishOnlyModel,
 } from "@/lib/constants";
 
 // --- Step Components ---
@@ -192,6 +197,23 @@ const StepAudio = ({
   );
 };
 
+// Rating bar component for speed/accuracy
+const RatingBar = ({ value, max = 5, label }: { value: number; max?: number; label: string }) => (
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-muted-foreground w-16">{label}</span>
+    <div className="flex gap-0.5 flex-1">
+      {Array.from({ length: max }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 flex-1 rounded-full transition-colors ${
+            i < value ? "bg-primary" : "bg-muted-foreground/20"
+          }`}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 const StepModel = ({
   language,
   setLanguage,
@@ -204,96 +226,169 @@ const StepModel = ({
   model: string;
   setModel: (m: string) => void;
   options: Options;
-}) => (
-  <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-    <div className="glass-card p-1 max-w-md">
-      <Select value={language} onValueChange={setLanguage}>
-        <SelectTrigger className="h-12 text-base bg-transparent border-0 rounded-xl px-4 focus:ring-0 focus:ring-offset-0">
-          <span className="flex items-center gap-3 w-full">
-            <Globe className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Language:</span>
-            <SelectValue />
-          </span>
-        </SelectTrigger>
-        <SelectContent className="border-border/50 bg-popover/95 backdrop-blur-xl shadow-2xl rounded-xl max-h-[280px]">
-          {options.languages.map((lang) => (
-            <SelectItem
-              key={lang}
-              value={lang}
-              className="py-2.5 rounded-lg cursor-pointer"
-            >
-              {lang === "auto" ? "Auto-detect" : lang.toUpperCase()}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+}) => {
+  const selectedModel = MODEL_OPTIONS.find((m) => m.id === model);
+  const categoryInfo = selectedModel ? MODEL_CATEGORIES[selectedModel.category] : null;
 
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Cpu className="w-4 h-4" />
-          Processing Model
-        </span>
-        <span className="badge-glow !py-1 !px-2.5 !text-[10px]">
-          <Shield className="w-3 h-3" />
-          Local Only
-        </span>
+  // Auto-switch language when selecting English-only model
+  const handleModelSelect = (modelId: string) => {
+    setModel(modelId);
+    if (isEnglishOnlyModel(modelId) && language !== "en") {
+      setLanguage("en");
+    }
+  };
+
+  return (
+    <div className="flex gap-6 animate-in slide-in-from-bottom-4 duration-500 w-full max-w-6xl">
+      {/* Left side - Model grid */}
+      <div className="flex-1 space-y-4">
+        <div className="glass-card p-1 max-w-sm">
+          <Select value={language} onValueChange={setLanguage}>
+            <SelectTrigger className="h-11 text-sm bg-transparent border-0 rounded-lg px-4 focus:ring-0 focus:ring-offset-0">
+              <span className="flex items-center gap-3 w-full">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Language:</span>
+                <SelectValue />
+              </span>
+            </SelectTrigger>
+            <SelectContent className="border-border/50 bg-popover/95 backdrop-blur-xl shadow-2xl rounded-xl max-h-[280px]">
+              {options.languages.map((lang) => (
+                <SelectItem
+                  key={lang}
+                  value={lang}
+                  className="py-2.5 rounded-lg cursor-pointer"
+                >
+                  {lang === "auto" ? "Auto-detect" : lang.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Cpu className="w-4 h-4" />
+              Processing Model
+            </span>
+            <span className="badge-glow !py-1 !px-2.5 !text-[10px]">
+              <Shield className="w-3 h-3" />
+              Local Only
+            </span>
+          </div>
+
+          <div
+            className="grid grid-cols-4 gap-1.5"
+            role="radiogroup"
+            aria-label="Select processing model"
+          >
+            {MODEL_OPTIONS.map((m, idx) => {
+              const isActive = model === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  className={`
+                    relative p-2.5 rounded-md text-left transition-all duration-200 group
+                    flex flex-col gap-0 animate-in slide-in-from-bottom-4
+                    ${
+                      isActive
+                        ? "glass-strong border-primary/50 shadow-md shadow-primary/10"
+                        : "glass-card hover:bg-muted/50"
+                    }
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1
+                  `}
+                  style={{ animationDelay: `${idx * 20}ms` }}
+                  onClick={() => handleModelSelect(m.id)}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span
+                      className={`font-medium text-xs ${isActive ? "text-primary" : "text-foreground"}`}
+                    >
+                      {m.label}
+                    </span>
+                    {isActive && (
+                      <div
+                        className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_currentColor]"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {m.detail}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div
-        className="grid grid-cols-2 md:grid-cols-3 gap-3"
-        role="radiogroup"
-        aria-label="Select processing model"
-      >
-        {MODEL_OPTIONS.map((m, idx) => {
-          const isActive = model === m.id;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              className={`
-                relative p-4 rounded-2xl text-left transition-all duration-300 group
-                flex flex-col gap-1 animate-in slide-in-from-bottom-4
-                ${
-                  isActive
-                    ? "glass-strong border-primary/50 shadow-lg shadow-primary/10"
-                    : "glass-card hover:shadow-md hover:-translate-y-0.5"
-                }
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
-              `}
-              style={{ animationDelay: `${idx * 50}ms` }}
-              onClick={() => setModel(m.id)}
-            >
-              <div className="flex items-center justify-between w-full mb-1">
-                <span
-                  className={`font-semibold ${isActive ? "text-primary" : "text-foreground"}`}
-                >
-                  {m.label}
-                </span>
-                {isActive && (
-                  <div
-                    className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_currentColor]"
-                    aria-hidden="true"
-                  />
+      {/* Right side - Model details card */}
+      {selectedModel && (
+        <div className="w-72 flex-shrink-0 animate-in slide-in-from-right-4 duration-300">
+          <div className="glass-card p-4 space-y-4 h-[360px] overflow-y-auto">
+            {/* Header */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg text-foreground">{selectedModel.label}</h3>
+                {categoryInfo && (
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/50 ${categoryInfo.color}`}>
+                    {categoryInfo.label}
+                  </span>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground">{selectedModel.desc}</p>
+            </div>
 
-              <span className="text-xs text-muted-foreground font-medium">
-                {m.detail}
-              </span>
-              <span className="text-[10px] text-muted-foreground/60 leading-tight">
-                {m.tradeoff}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            {/* Ratings */}
+            <div className="space-y-2 py-2 border-y border-border/30">
+              <RatingBar value={selectedModel.speed} label="Speed" />
+              <RatingBar value={selectedModel.accuracy} label="Accuracy" />
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{selectedModel.detail}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <HardDrive className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{selectedModel.size}</span>
+              </div>
+            </div>
+
+            {/* Best for */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Target className="w-3.5 h-3.5" />
+                Best for
+              </div>
+              <p className="text-xs text-foreground/80 leading-relaxed">
+                {selectedModel.bestFor}
+              </p>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Info className="w-3.5 h-3.5" />
+                About
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {selectedModel.description}
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const StepTheme = ({
   theme,
@@ -467,7 +562,7 @@ export function Onboarding() {
 
   // Form state
   const [language, setLanguage] = useState("auto");
-  const [model, setModel] = useState("small");
+  const [model, setModel] = useState("tiny");
   const [autoStart, setAutoStart] = useState(true);
   const [retention] = useState(-1);
   const [theme, setTheme] = useState<Settings["theme"]>("system");
@@ -534,18 +629,16 @@ export function Onboarding() {
   const nextStep = () => setStep((s) => s + 1);
   const prevStep = () => setStep((s) => s - 1);
 
-  // Handle download completion - auto-advance to next step
-  const handleDownloadComplete = (success: boolean) => {
-    if (success) {
-      // Small delay for UX before auto-advancing
-      setTimeout(() => {
-        nextStep();
-      }, 1000);
-    }
-  };
+  // Track if download is actively in progress
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Handle download state changes
+  const handleDownloadStart = () => setIsDownloading(true);
+  const handleDownloadComplete = (_success: boolean) => setIsDownloading(false);
 
   // Handle download cancellation - go back to model selection
   const handleDownloadCancel = () => {
+    setIsDownloading(false);
     prevStep();
   };
 
@@ -646,6 +739,7 @@ export function Onboarding() {
         return (
           <ModelDownloadProgress
             modelName={model}
+            onStart={handleDownloadStart}
             onComplete={handleDownloadComplete}
             onCancel={handleDownloadCancel}
             autoStart={true}
@@ -667,8 +761,6 @@ export function Onboarding() {
     }
   };
 
-  // Check if current step is the download step (should hide navigation)
-  const isDownloadStep = step === 3;
 
   return (
     <main className="min-h-screen flex flex-col bg-background relative overflow-hidden selection:bg-primary/20">
@@ -734,52 +826,51 @@ export function Onboarding() {
           </div>
         </header>
 
-        {/* Step Content - Centered */}
-        <div className="flex-1 flex items-start justify-center">
+        {/* Step Content - Fixed height to prevent layout shift */}
+        <div className="flex-1 flex items-start justify-center min-h-0 overflow-y-auto">
           {renderStepContent()}
         </div>
 
-        {/* Navigation - Fixed at bottom (hidden during download) */}
-        {!isDownloadStep && (
-          <div className="flex items-center justify-center gap-4 pt-8 mt-auto">
-            {!isFirstStep && (
-              <Button
-                variant="ghost"
-                size="lg"
-                onClick={prevStep}
-                className="rounded-xl text-muted-foreground hover:text-foreground px-6"
-              >
-                <ArrowLeft className="mr-2 w-4 h-4" />
-                Back
-              </Button>
-            )}
-
+        {/* Navigation - Fixed at bottom */}
+        <div className="flex items-center justify-center gap-4 pt-6 flex-shrink-0">
+          {!isFirstStep && (
             <Button
-              variant="glow"
+              variant="ghost"
               size="lg"
-              onClick={isLastStep ? handleFinish : nextStep}
-              disabled={saving}
-              className="rounded-xl min-w-[160px]"
+              onClick={prevStep}
+              disabled={isDownloading}
+              className="rounded-xl text-muted-foreground hover:text-foreground px-6"
             >
-              {saving ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Saving...
-                </>
-              ) : isLastStep ? (
-                <>
-                  Get Started
-                  <Check className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              <ArrowLeft className="mr-2 w-4 h-4" />
+              Back
             </Button>
-          </div>
-        )}
+          )}
+
+          <Button
+            variant="glow"
+            size="lg"
+            onClick={isLastStep ? handleFinish : nextStep}
+            disabled={saving || isDownloading}
+            className="rounded-xl min-w-[160px]"
+          >
+            {saving ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : isLastStep ? (
+              <>
+                Get Started
+                <Check className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Footer */}

@@ -14,7 +14,6 @@ Data classes:
 - CancelToken: cancel(), is_cancelled()
 """
 import pytest
-from pathlib import Path
 from dataclasses import dataclass
 from unittest.mock import Mock, patch, MagicMock
 from typing import Callable, Optional
@@ -94,28 +93,48 @@ class TestModelSizes:
     """Tests for model size reference data."""
 
     def test_model_sizes_defined(self):
-        """MODEL_SIZES contains expected models with approximate sizes."""
+        """MODEL_SIZES contains all expected faster-whisper models with approximate sizes."""
         from services.model_manager import MODEL_SIZES
 
-        # From design doc:
-        # tiny: ~60-70 MB
-        # base: ~170-180 MB
-        # small: ~500-550 MB
-        # medium: ~1.5-1.6 GB
-        # large-v3: ~3.0-3.1 GB
-        # turbo: ~800-900 MB
-
+        # Multilingual models
         assert "tiny" in MODEL_SIZES
         assert "base" in MODEL_SIZES
         assert "small" in MODEL_SIZES
         assert "medium" in MODEL_SIZES
+        assert "large-v1" in MODEL_SIZES
+        assert "large-v2" in MODEL_SIZES
         assert "large-v3" in MODEL_SIZES
         assert "turbo" in MODEL_SIZES
 
+        # English-only models
+        assert "tiny.en" in MODEL_SIZES
+        assert "base.en" in MODEL_SIZES
+        assert "small.en" in MODEL_SIZES
+        assert "medium.en" in MODEL_SIZES
+
+        # Distilled models
+        assert "distil-small.en" in MODEL_SIZES
+        assert "distil-medium.en" in MODEL_SIZES
+        assert "distil-large-v2" in MODEL_SIZES
+        assert "distil-large-v3" in MODEL_SIZES
+
         # Verify approximate sizes (within reasonable range)
-        assert 50_000_000 < MODEL_SIZES["tiny"] < 80_000_000
-        assert 150_000_000 < MODEL_SIZES["base"] < 200_000_000
-        assert 450_000_000 < MODEL_SIZES["small"] < 600_000_000
+        assert 50_000_000 < MODEL_SIZES["tiny"] < 100_000_000
+        assert 100_000_000 < MODEL_SIZES["base"] < 200_000_000
+        assert 400_000_000 < MODEL_SIZES["small"] < 600_000_000
+
+    def test_get_available_models(self):
+        """get_available_models returns list of all supported models."""
+        from services.model_manager import ModelManager
+
+        manager = ModelManager()
+        models = manager.get_available_models()
+
+        assert isinstance(models, list)
+        assert len(models) == 16  # Total number of models
+        assert "tiny" in models
+        assert "turbo" in models
+        assert "distil-large-v3" in models
 
 
 class TestModelManager:
@@ -225,18 +244,11 @@ class TestModelManagerIntegration:
         """is_model_cached correctly detects if tiny model is cached.
 
         Note: This test's result depends on whether tiny was downloaded before.
-        It primarily tests that the method runs without error.
+        It primarily tests that the method runs without error and uses
+        faster_whisper's download_model with local_files_only=True internally.
         """
         result = model_manager.is_model_cached("tiny")
         assert isinstance(result, bool)
-
-    def test_get_cache_path_returns_path(self, model_manager):
-        """get_cache_path returns the huggingface cache directory."""
-        cache_path = model_manager.get_cache_path()
-
-        assert isinstance(cache_path, Path)
-        # Should be in user's home directory
-        assert ".cache" in str(cache_path) or "huggingface" in str(cache_path)
 
 
 class TestProgressCallback:

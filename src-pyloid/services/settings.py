@@ -3,8 +3,16 @@ from typing import Literal, Optional
 from .database import DatabaseService
 
 
-# Whisper model options
-WHISPER_MODELS = ["tiny", "base", "small", "medium", "large-v3", "turbo"]
+# Whisper model options - all models supported by faster-whisper
+# Order: multilingual models first, then English-only, then distilled
+WHISPER_MODELS = [
+    # Multilingual models (most commonly used)
+    "tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3", "turbo",
+    # English-only models (optimized for English)
+    "tiny.en", "base.en", "small.en", "medium.en",
+    # Distilled models (faster inference, English-only)
+    "distil-small.en", "distil-medium.en", "distil-large-v2", "distil-large-v3",
+]
 
 # Supported languages (subset - full list at https://github.com/openai/whisper)
 WHISPER_LANGUAGES = [

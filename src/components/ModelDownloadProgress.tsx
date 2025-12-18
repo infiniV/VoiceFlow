@@ -7,6 +7,7 @@ import type { DownloadProgress, DownloadComplete } from "@/lib/types";
 
 interface ModelDownloadProgressProps {
   modelName: string;
+  onStart?: () => void;
   onComplete: (success: boolean) => void;
   onCancel?: () => void;
   autoStart?: boolean;
@@ -35,6 +36,7 @@ type DownloadState = "idle" | "downloading" | "completed" | "cancelled" | "error
 
 export function ModelDownloadProgress({
   modelName,
+  onStart,
   onComplete,
   onCancel,
   autoStart = true,
@@ -50,7 +52,7 @@ export function ModelDownloadProgress({
   }, []);
 
   // Handle download complete events
-  const handleComplete = useCallback(
+  const handleCompleteEvent = useCallback(
     (e: CustomEvent<DownloadComplete>) => {
       const result = e.detail;
 
@@ -72,13 +74,13 @@ export function ModelDownloadProgress({
   // Set up event listeners
   useEffect(() => {
     document.addEventListener("download-progress" as any, handleProgress);
-    document.addEventListener("download-complete" as any, handleComplete);
+    document.addEventListener("download-complete" as any, handleCompleteEvent);
 
     return () => {
       document.removeEventListener("download-progress" as any, handleProgress);
-      document.removeEventListener("download-complete" as any, handleComplete);
+      document.removeEventListener("download-complete" as any, handleCompleteEvent);
     };
-  }, [handleProgress, handleComplete]);
+  }, [handleProgress, handleCompleteEvent]);
 
   // Auto-start download
   useEffect(() => {
@@ -90,20 +92,21 @@ export function ModelDownloadProgress({
 
   const startDownload = async () => {
     try {
-      setState("downloading");
       setError(null);
 
       const result = await api.startModelDownload(modelName);
 
       if (result.alreadyCached) {
-        // Model was already cached, complete immediately
+        // Model was already cached, show completed state immediately
         setState("completed");
-        onComplete(true);
+      } else {
+        // Actually downloading - notify parent
+        setState("downloading");
+        onStart?.();
       }
     } catch (err) {
       setState("error");
       setError(err instanceof Error ? err.message : "Failed to start download");
-      onComplete(false);
     }
   };
 
