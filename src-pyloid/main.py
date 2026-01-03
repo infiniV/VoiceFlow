@@ -5,6 +5,7 @@ from pyloid import Pyloid
 import sys
 
 from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtWidgets import QWidget
 
 from server import server, register_onboarding_complete_callback, register_data_reset_callback, register_window_actions, register_download_progress_callback
 from app_controller import get_controller
@@ -217,6 +218,8 @@ def resize_popup(width: int, height: int):
             Qt.Tool |
             Qt.WindowDoesNotAcceptFocus
         )
+        # Re-apply translucent background (required after setWindowFlags)
+        qwindow.setAttribute(Qt.WA_TranslucentBackground, True)
         # Prevent window resizing
         qwindow.setFixedSize(width, height)
         qwindow.show()
@@ -247,6 +250,10 @@ def init_popup():
             # Access internal Qt objects for transparency setup
             qwindow = popup_window._window._window
             webview = popup_window._window.web_view
+
+            # CRITICAL: Enable translucent background on the window widget
+            # This is required for proper transparency on Windows in production
+            qwindow.setAttribute(Qt.WA_TranslucentBackground, True)
 
             # CRITICAL: Set background color BEFORE loading URL
             # Qt WebEngineView requires this order to avoid black/white background
