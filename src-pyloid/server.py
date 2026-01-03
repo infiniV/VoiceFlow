@@ -114,14 +114,17 @@ async def validate_hotkey(hotkey: str, excludeCurrent: Optional[str] = None):
         excludeCurrent: Field to exclude from conflict check ("holdHotkey" or "toggleHotkey")
 
     Returns:
-        {"valid": bool, "error": str or None, "conflicts": bool}
+        {"valid": bool, "error": str or None, "conflicts": bool, "normalized": str}
     """
-    from services.hotkey import validate_hotkey as do_validate, are_hotkeys_conflicting
+    from services.hotkey import validate_hotkey as do_validate, are_hotkeys_conflicting, normalize_hotkey
 
     # Validate format
     is_valid, error = do_validate(hotkey)
     if not is_valid:
-        return {"valid": False, "error": error, "conflicts": False}
+        return {"valid": False, "error": error, "conflicts": False, "normalized": hotkey}
+
+    # Normalize the hotkey to canonical format
+    normalized = normalize_hotkey(hotkey)
 
     # Check for conflicts with existing hotkeys
     controller = get_controller()
@@ -130,17 +133,18 @@ async def validate_hotkey(hotkey: str, excludeCurrent: Optional[str] = None):
     conflicts = False
     conflict_with = None
 
-    if excludeCurrent != "holdHotkey" and are_hotkeys_conflicting(hotkey, settings.get("holdHotkey", "")):
+    if excludeCurrent != "holdHotkey" and are_hotkeys_conflicting(normalized, settings.get("holdHotkey", "")):
         conflicts = True
         conflict_with = "Hold Mode"
-    elif excludeCurrent != "toggleHotkey" and are_hotkeys_conflicting(hotkey, settings.get("toggleHotkey", "")):
+    elif excludeCurrent != "toggleHotkey" and are_hotkeys_conflicting(normalized, settings.get("toggleHotkey", "")):
         conflicts = True
         conflict_with = "Toggle Mode"
 
     return {
         "valid": not conflicts,
         "error": f"Conflicts with {conflict_with} hotkey" if conflicts else None,
-        "conflicts": conflicts
+        "conflicts": conflicts,
+        "normalized": normalized
     }
 
 
@@ -282,9 +286,36 @@ async def open_data_folder():
 async def open_external_url(url: str):
     """Open a URL in the system's default browser."""
     import webbrowser
+    import sys
+    import subprocess
+
     log.info("Opening external URL", url=url)
-    webbrowser.open(url)
-    return {"success": True}
+
+    try:
+        # On Windows, os.startfile is more reliable than webbrowser in packaged apps
+        if sys.platform == 'win32':
+            import os
+            os.startfile(url)
+        elif sys.platform == 'darwin':
+            # macOS
+            subprocess.run(['open', url], check=True)
+        else:
+            # Linux and other platforms - try xdg-open first, fallback to webbrowser
+            try:
+                subprocess.run(['xdg-open', url], check=True)
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                webbrowser.open(url)
+
+        return {"success": True}
+    except Exception as e:
+        log.error("Failed to open external URL", url=url, error=str(e))
+        # Fallback to webbrowser module
+        try:
+            webbrowser.open(url)
+            return {"success": True}
+        except Exception as fallback_error:
+            log.error("Fallback browser open also failed", error=str(fallback_error))
+            return {"success": False, "error": str(e)}
 
 
 @server.method()

@@ -21,6 +21,9 @@ const KEY_MAP: Record<string, string> = {
 
 const MODIFIER_KEYS = new Set(["ctrl", "shift", "alt", "win"]);
 
+// Canonical modifier order - must match backend MODIFIER_ORDER in hotkey.py
+const MODIFIER_ORDER = ["ctrl", "alt", "shift", "win"];
+
 function normalizeKey(key: string): string {
   return KEY_MAP[key] || key.toLowerCase();
 }
@@ -78,8 +81,20 @@ export function HotkeyCapture({
         const mods = pressed.filter((k) => MODIFIER_KEYS.has(k));
         const mainKeys = pressed.filter((k) => !MODIFIER_KEYS.has(k));
 
-        if (mods.length > 0 && mainKeys.length > 0) {
-          const hotkey = [...mods, ...mainKeys].join("+");
+        // Valid combinations:
+        // 1. At least one modifier + at least one non-modifier key (e.g., "ctrl+r")
+        // 2. At least two modifiers (e.g., "ctrl+win") - these are also valid hotkeys
+        const hasValidModifierCombo = mods.length > 0 && mainKeys.length > 0;
+        const hasMultipleModifiers = mods.length >= 2;
+
+        if (hasValidModifierCombo || hasMultipleModifiers) {
+          // Sort modifiers in canonical order to match backend
+          const sortedMods = mods.sort(
+            (a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b)
+          );
+          // Sort main keys alphabetically for consistency
+          const sortedMainKeys = mainKeys.sort();
+          const hotkey = [...sortedMods, ...sortedMainKeys].join("+");
 
           // Validate
           if (onValidate) {

@@ -147,7 +147,7 @@
         overflow-x: hidden;
     }
 
-    /* NOISE TEXTURE OVERLAY - More subtle for premium feel */
+    /* NOISE TEXTURE OVERLAY - More subtle for premium feel, GPU accelerated */
     body::before {
         content: "";
         position: fixed;
@@ -156,6 +156,9 @@
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
         pointer-events: none;
         opacity: 0.5;
+        /* Promote to own GPU layer to prevent interference with other elements */
+        transform: translateZ(0);
+        will-change: auto;
     }
 
     /* Selection styling with emerald */
@@ -299,13 +302,18 @@
         background-size: 60px 60px;
     }
 
-    /* Animated Gradient Orbs */
+    /* Animated Gradient Orbs - GPU accelerated to prevent flickering */
     .orb {
         position: absolute;
         border-radius: 50%;
         filter: blur(100px);
         pointer-events: none;
         opacity: 0.5;
+        /* Force GPU layer to prevent repaints affecting other elements */
+        will-change: transform;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
     }
 
     .orb-primary {
@@ -325,16 +333,16 @@
 
     @keyframes float-orb {
         0%, 100% {
-            transform: translate(0, 0) scale(1);
+            transform: translate3d(0, 0, 0) scale(1);
         }
         25% {
-            transform: translate(30px, -30px) scale(1.1);
+            transform: translate3d(30px, -30px, 0) scale(1.1);
         }
         50% {
-            transform: translate(-20px, 20px) scale(0.95);
+            transform: translate3d(-20px, 20px, 0) scale(0.95);
         }
         75% {
-            transform: translate(-30px, -20px) scale(1.05);
+            transform: translate3d(-30px, -20px, 0) scale(1.05);
         }
     }
 

@@ -77,6 +77,7 @@ export interface HotkeyValidation {
   valid: boolean;
   error: string | null;
   conflicts: boolean;
+  normalized: string;
 }
 
 export interface GpuInfo {

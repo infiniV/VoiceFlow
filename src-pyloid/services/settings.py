@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 from .database import DatabaseService
+from .hotkey import normalize_hotkey
 
 
 # Whisper model options - all models supported by faster-whisper
@@ -117,13 +118,13 @@ class SettingsService:
             self.db.set_setting("microphone", str(microphone))
         if save_audio_to_history is not None:
             self.db.set_setting("save_audio_to_history", "true" if save_audio_to_history else "false")
-        # Hotkey settings
+        # Hotkey settings - normalize before storing for consistent format
         if hold_hotkey is not None:
-            self.db.set_setting("hold_hotkey", hold_hotkey)
+            self.db.set_setting("hold_hotkey", normalize_hotkey(hold_hotkey))
         if hold_hotkey_enabled is not None:
             self.db.set_setting("hold_hotkey_enabled", "true" if hold_hotkey_enabled else "false")
         if toggle_hotkey is not None:
-            self.db.set_setting("toggle_hotkey", toggle_hotkey)
+            self.db.set_setting("toggle_hotkey", normalize_hotkey(toggle_hotkey))
         if toggle_hotkey_enabled is not None:
             self.db.set_setting("toggle_hotkey_enabled", "true" if toggle_hotkey_enabled else "false")
 

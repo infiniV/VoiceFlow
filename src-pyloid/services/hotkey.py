@@ -6,11 +6,64 @@ from services.logger import get_logger
 log = get_logger("hotkey")
 
 
+# Canonical modifier order for consistent hotkey strings
+# This order matches what the keyboard library expects
+MODIFIER_ORDER = ['ctrl', 'alt', 'shift', 'win']
+VALID_MODIFIERS = {'ctrl', 'alt', 'shift', 'win', 'windows', 'left windows', 'right windows'}
+
+
+def normalize_hotkey(hotkey: str) -> str:
+    """Normalize a hotkey string to a canonical format.
+
+    Ensures consistent ordering: modifiers first (in MODIFIER_ORDER), then main keys.
+    Also normalizes key names (e.g., 'windows' -> 'win').
+
+    Example: 'r+win+ctrl' -> 'ctrl+win+r'
+    """
+    if not hotkey or not hotkey.strip():
+        return hotkey
+
+    parts = [p.strip().lower() for p in hotkey.split('+')]
+
+    # Normalize key names
+    normalized_parts = []
+    for p in parts:
+        if p in ('windows', 'left windows', 'right windows'):
+            normalized_parts.append('win')
+        elif p == 'control':
+            normalized_parts.append('ctrl')
+        else:
+            normalized_parts.append(p)
+
+    # Separate modifiers and main keys
+    modifiers = []
+    main_keys = []
+    for p in normalized_parts:
+        if p in {'ctrl', 'alt', 'shift', 'win'}:
+            if p not in modifiers:  # Avoid duplicates
+                modifiers.append(p)
+        else:
+            if p not in main_keys:  # Avoid duplicates
+                main_keys.append(p)
+
+    # Sort modifiers by canonical order
+    modifiers.sort(key=lambda m: MODIFIER_ORDER.index(m) if m in MODIFIER_ORDER else 99)
+
+    # Sort main keys alphabetically for consistency
+    main_keys.sort()
+
+    return '+'.join(modifiers + main_keys)
+
+
 # Validation utilities
 def validate_hotkey(hotkey: str) -> tuple[bool, str]:
     """Validate a hotkey string format.
 
     Returns (is_valid, error_message).
+
+    Allows both:
+    - modifier+key combos (e.g., "ctrl+r")
+    - multiple modifiers (e.g., "ctrl+win") - these work with the keyboard library
     """
     if not hotkey or not hotkey.strip():
         return False, "Hotkey cannot be empty"
@@ -18,14 +71,29 @@ def validate_hotkey(hotkey: str) -> tuple[bool, str]:
     parts = [p.strip().lower() for p in hotkey.split('+')]
 
     if len(parts) < 2:
-        return False, "Hotkey must have at least a modifier and a key"
+        return False, "Hotkey must have at least two keys"
 
-    valid_modifiers = {'ctrl', 'alt', 'shift', 'win', 'windows', 'left windows', 'right windows'}
+    # Normalize key names for validation
+    normalized_parts = []
+    for p in parts:
+        if p in ('windows', 'left windows', 'right windows'):
+            normalized_parts.append('win')
+        elif p == 'control':
+            normalized_parts.append('ctrl')
+        else:
+            normalized_parts.append(p)
 
     # Check that we have at least one modifier
-    modifiers = [p for p in parts[:-1] if p in valid_modifiers]
+    modifiers = [p for p in normalized_parts if p in {'ctrl', 'alt', 'shift', 'win'}]
     if not modifiers:
         return False, "Hotkey must include at least one modifier (Ctrl, Alt, Shift, or Win)"
+
+    # Allow either:
+    # 1. At least one modifier + at least one non-modifier key (e.g., "ctrl+r")
+    # 2. At least two modifiers (e.g., "ctrl+win") - these are valid hotkeys
+    main_keys = [p for p in normalized_parts if p not in {'ctrl', 'alt', 'shift', 'win'}]
+    if not main_keys and len(modifiers) < 2:
+        return False, "Hotkey must have at least two keys (modifier+key or multiple modifiers)"
 
     return True, ""
 
@@ -35,18 +103,7 @@ def are_hotkeys_conflicting(hotkey1: str, hotkey2: str) -> bool:
     if not hotkey1 or not hotkey2:
         return False
 
-    def normalize(hk: str) -> str:
-        parts = [k.strip().lower() for k in hk.split('+')]
-        # Normalize windows key variants
-        normalized = []
-        for p in parts:
-            if p in ('windows', 'left windows', 'right windows'):
-                normalized.append('win')
-            else:
-                normalized.append(p)
-        return '+'.join(sorted(normalized))
-
-    return normalize(hotkey1) == normalize(hotkey2)
+    return normalize_hotkey(hotkey1) == normalize_hotkey(hotkey2)
 
 
 class HotkeyService:
@@ -86,15 +143,20 @@ class HotkeyService:
         """Update hotkey configuration and re-register handlers if running."""
         needs_restart = False
 
-        if hold_hotkey is not None and hold_hotkey != self._hold_hotkey:
-            self._hold_hotkey = hold_hotkey
-            needs_restart = True
+        # Normalize hotkeys before storing to ensure consistent format
+        if hold_hotkey is not None:
+            hold_hotkey = normalize_hotkey(hold_hotkey)
+            if hold_hotkey != self._hold_hotkey:
+                self._hold_hotkey = hold_hotkey
+                needs_restart = True
         if hold_enabled is not None and hold_enabled != self._hold_hotkey_enabled:
             self._hold_hotkey_enabled = hold_enabled
             needs_restart = True
-        if toggle_hotkey is not None and toggle_hotkey != self._toggle_hotkey:
-            self._toggle_hotkey = toggle_hotkey
-            needs_restart = True
+        if toggle_hotkey is not None:
+            toggle_hotkey = normalize_hotkey(toggle_hotkey)
+            if toggle_hotkey != self._toggle_hotkey:
+                self._toggle_hotkey = toggle_hotkey
+                needs_restart = True
         if toggle_enabled is not None and toggle_enabled != self._toggle_hotkey_enabled:
             self._toggle_hotkey_enabled = toggle_enabled
             needs_restart = True
@@ -217,27 +279,44 @@ class HotkeyService:
 
     def _unregister_hotkeys(self):
         """Unregister all hotkeys and release handlers."""
-        keyboard.unhook_all()
+        try:
+            keyboard.unhook_all()
+        except Exception as e:
+            log.error("Failed to unregister hotkeys", error=str(e))
 
     def _register_hold_hotkey(self):
         """Register hold-to-record hotkey with press/release handling."""
         log.info("Registering hold hotkey", hotkey=self._hold_hotkey)
-        keyboard.add_hotkey(self._hold_hotkey, self._on_hold_press, suppress=False)
+        try:
+            keyboard.add_hotkey(self._hold_hotkey, self._on_hold_press, suppress=False)
 
-        # Monitor key releases to detect when user lets go
-        keys = self._parse_hotkey_keys(self._hold_hotkey)
-        for key in keys:
-            keyboard.on_release_key(key, self._check_hold_release)
-            # Also register windows key variants
-            if key == 'win':
-                keyboard.on_release_key('windows', self._check_hold_release)
-                keyboard.on_release_key('left windows', self._check_hold_release)
-                keyboard.on_release_key('right windows', self._check_hold_release)
+            # Monitor key releases to detect when user lets go
+            keys = self._parse_hotkey_keys(self._hold_hotkey)
+            for key in keys:
+                try:
+                    keyboard.on_release_key(key, self._check_hold_release)
+                    # Also register windows key variants
+                    if key == 'win':
+                        keyboard.on_release_key('windows', self._check_hold_release)
+                        keyboard.on_release_key('left windows', self._check_hold_release)
+                        keyboard.on_release_key('right windows', self._check_hold_release)
+                except Exception as e:
+                    log.warning("Failed to register release handler for key", key=key, error=str(e))
+
+            log.info("Hold hotkey registered successfully", hotkey=self._hold_hotkey)
+        except Exception as e:
+            log.error("Failed to register hold hotkey", hotkey=self._hold_hotkey, error=str(e))
+            # Don't crash - just log the error and continue without this hotkey
 
     def _register_toggle_hotkey(self):
         """Register toggle hotkey - single press toggles recording."""
         log.info("Registering toggle hotkey", hotkey=self._toggle_hotkey)
-        keyboard.add_hotkey(self._toggle_hotkey, self._on_toggle_press, suppress=False)
+        try:
+            keyboard.add_hotkey(self._toggle_hotkey, self._on_toggle_press, suppress=False)
+            log.info("Toggle hotkey registered successfully", hotkey=self._toggle_hotkey)
+        except Exception as e:
+            log.error("Failed to register toggle hotkey", hotkey=self._toggle_hotkey, error=str(e))
+            # Don't crash - just log the error and continue without this hotkey
 
     # Public API
     def start(self):

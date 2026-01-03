@@ -124,7 +124,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <div className="pt-3 px-4 flex items-center justify-between text-[10px] text-sidebar-foreground/30 font-mono">
             <span className="badge-glow !p-1.5 !text-[10px]">
               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              v1.1.0
+              v1.3.1
             </span>
             <span className="flex items-center gap-1">
               <Heart className="w-2.5 h-2.5 text-red-500/60" />

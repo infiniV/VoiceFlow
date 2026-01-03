@@ -149,7 +149,7 @@ export function SettingsTab() {
     async (hotkey: string, excludeField: "holdHotkey" | "toggleHotkey") => {
       try {
         const result = await api.validateHotkey(hotkey, excludeField);
-        return result;
+        return { valid: result.valid, error: result.error };
       } catch (err) {
         return { valid: false, error: "Failed to validate hotkey" };
       }
