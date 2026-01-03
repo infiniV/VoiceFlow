@@ -82,7 +82,7 @@ popup_window.invoke('popup-state', {'state': 'recording'})
 
 ### Recording Flow
 
-1. User holds hotkey (Ctrl+Win)
+1. User holds hotkey (configurable, default Ctrl+Win)
 2. `HotkeyService.on_activate` -> `AppController._handle_hotkey_activate` -> `AudioService.start_recording`
 3. Popup transitions to "recording" state, shows amplitude visualizer
 4. User releases hotkey
@@ -91,6 +91,23 @@ popup_window.invoke('popup-state', {'state': 'recording'})
 7. `ClipboardService.paste_at_cursor` pastes text
 8. History saved to database
 9. Popup returns to "idle" state
+
+### Qt Threading Pattern
+
+The `keyboard` library runs hotkey callbacks in a separate thread, but Qt requires UI operations on the main thread. The solution uses Qt signals/slots:
+
+1. `ThreadSafeSignals` class in `main.py` defines signals (recording_started, recording_stopped, etc.)
+2. Callback functions from `AppController` emit signals instead of directly updating UI
+3. Signals connect to slot functions with `Qt.QueuedConnection` to ensure they run on the main thread
+4. Slot functions safely update popup state and window properties
+
+### Popup Window Transparency
+
+For transparent popup windows on Windows:
+- Set `transparent=True` when creating the window
+- Call `qwindow.setAttribute(Qt.WA_TranslucentBackground, True)` on the Qt window
+- Set `webview.page().setBackgroundColor(QColor(0, 0, 0, 0))` before loading URL
+- Re-apply `WA_TranslucentBackground` after any `setWindowFlags()` call
 
 ### Model Download Flow
 
@@ -106,8 +123,10 @@ popup_window.invoke('popup-state', {'state': 'recording'})
 
 - **Singleton controller**: `get_controller()` returns singleton `AppController` instance
 - **UI callbacks**: Backend notifies frontend of state changes via callbacks set in `set_ui_callbacks()`
+- **Thread-safe signals**: Qt signals with `QueuedConnection` marshal UI updates from background threads to main thread
 - **Background threads**: Model loading, downloads, and transcription run in daemon threads
 - **Domain logging**: All services use `get_logger(domain)` for structured logging with domains like `model`, `audio`, `hotkey`, etc.
+- **Custom hotkeys**: Supports modifier-only combos (e.g., Ctrl+Win) and standard combos (e.g., Ctrl+R). Frontend captures keys, backend validates and registers.
 - **Path alias**: Frontend uses `@/` for `src/` imports (configured in tsconfig.json and vite.config.ts)
 
 ## Testing
