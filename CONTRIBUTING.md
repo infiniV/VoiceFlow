@@ -38,7 +38,6 @@ pnpm run lint         # Lint frontend
 ### Running Tests
 
 ```bash
-cd VoiceFlow
 uv run -p .venv pytest src-pyloid/tests/ -v
 ```
 

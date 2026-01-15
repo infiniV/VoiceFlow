@@ -11,7 +11,7 @@
 VoiceFlow brings OpenAI's Whisper directly to your Windows machine. Every word you speak is processed entirely on your hardware—your voice data never leaves your device. Built for privacy-conscious professionals who demand speed and reliability.
 
 <p align="center">
-  <a href="https://github.com/infiniV/VoiceFlow/releases/download/v1.2.1/VoiceFlowSetup-1.2.1.exe">
+  <a href="https://github.com/infiniV/VoiceFlow/releases/download/v1.3.1/VoiceFlowSetup-1.3.1.exe">
     <img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=windows&logoColor=white" alt="Download">
   </a>
   <a href="https://github.com/infiniV/VoiceFlow">
@@ -109,12 +109,12 @@ Choose from 16+ Whisper models optimized for different use cases.
 Take back control of your voice data. Open source and forever free.
 
 <p align="center">
-  <a href="https://github.com/infiniV/VoiceFlow/releases/download/v1.2.1/VoiceFlowSetup-1.2.1.exe">
+  <a href="https://github.com/infiniV/VoiceFlow/releases/download/v1.3.1/VoiceFlowSetup-1.3.1.exe">
     <img src="media/footer.png" alt="Download Now" width="100%">
   </a>
 </p>
 
-### [Download Installer v1.2.1 (Windows)](https://github.com/infiniV/VoiceFlow/releases/download/v1.2.1/VoiceFlowSetup-1.2.1.exe)
+### [Download Installer v1.3.1 (Windows)](https://github.com/infiniV/VoiceFlow/releases/download/v1.3.1/VoiceFlowSetup-1.3.1.exe)
 
 *Windows 10/11 • 64-bit • ~150MB*
 
