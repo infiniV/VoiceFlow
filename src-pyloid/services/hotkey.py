@@ -1,9 +1,20 @@
-import keyboard
+import sys
+import signal
 from typing import Callable, Optional
 import threading
 from services.logger import get_logger
 
 log = get_logger("hotkey")
+
+# Conditionally import keyboard library (requires root on Linux)
+_keyboard_available = False
+try:
+    import keyboard
+    _keyboard_available = True
+except ImportError:
+    log.warning("keyboard library not available")
+except Exception as e:
+    log.warning("keyboard library failed to load", error=str(e))
 
 
 # Canonical modifier order for consistent hotkey strings
@@ -123,6 +134,10 @@ class HotkeyService:
         self._hold_hotkey_enabled: bool = True
         self._toggle_hotkey: str = "ctrl+shift+win"
         self._toggle_hotkey_enabled: bool = False
+
+        # Signal-based hotkey state (for Linux without root)
+        self._signal_recording = False
+        self._signal_handler_installed = False
 
     def set_callbacks(
         self,
@@ -269,9 +284,82 @@ class HotkeyService:
         elif self._toggle_active:
             self._deactivate_toggle()
 
+    # Signal handling for Linux
+    def _setup_signal_handler(self):
+        """Set up SIGUSR2 signal handler for external hotkey triggering.
+
+        On Linux, the keyboard library requires root. As an alternative,
+        external tools (shell scripts, keybind daemons) can send SIGUSR2
+        to toggle recording.
+
+        Usage: kill -USR2 $(cat ~/.VoiceFlow/voiceflow.pid)
+        """
+        if sys.platform == "win32":
+            log.debug("Signal handlers not available on Windows")
+            return
+
+        if self._signal_handler_installed:
+            return
+
+        try:
+            signal.signal(signal.SIGUSR2, self._handle_signal)
+            self._signal_handler_installed = True
+            log.info("SIGUSR2 signal handler installed for hotkey toggle")
+        except Exception as e:
+            log.warning("Failed to install signal handler", error=str(e))
+
+    def _remove_signal_handler(self):
+        """Remove the SIGUSR2 signal handler."""
+        if not self._signal_handler_installed:
+            return
+
+        try:
+            signal.signal(signal.SIGUSR2, signal.SIG_DFL)
+            self._signal_handler_installed = False
+            log.debug("SIGUSR2 signal handler removed")
+        except Exception as e:
+            log.warning("Failed to remove signal handler", error=str(e))
+
+    def _handle_signal(self, signum, frame):
+        """Handle SIGUSR2 signal to toggle recording.
+
+        This toggles between recording and not recording states,
+        similar to toggle hotkey mode.
+        """
+        log.info("Received SIGUSR2 signal", recording=self._signal_recording)
+
+        if self._signal_recording:
+            # Stop recording
+            self._signal_recording = False
+            log.info("Signal: stopping recording")
+            if self._on_deactivate:
+                self._on_deactivate()
+        else:
+            # Start recording
+            self._signal_recording = True
+            log.info("Signal: starting recording")
+            if self._on_activate:
+                self._on_activate()
+
+    def trigger_signal_toggle(self):
+        """Programmatically trigger the same action as receiving SIGUSR2.
+
+        This can be called from other parts of the app if needed.
+        """
+        self._handle_signal(signal.SIGUSR2 if hasattr(signal, 'SIGUSR2') else 0, None)
+
     # Hotkey registration
     def _register_hotkeys(self):
         """Register all enabled hotkeys."""
+        # Always set up signal handler on Unix (as fallback/alternative)
+        if sys.platform != "win32":
+            self._setup_signal_handler()
+
+        # Only use keyboard library if available
+        if not _keyboard_available:
+            log.warning("keyboard library not available, using signal-only mode")
+            return
+
         if self._hold_hotkey_enabled and self._hold_hotkey:
             self._register_hold_hotkey()
         if self._toggle_hotkey_enabled and self._toggle_hotkey:
@@ -279,10 +367,15 @@ class HotkeyService:
 
     def _unregister_hotkeys(self):
         """Unregister all hotkeys and release handlers."""
-        try:
-            keyboard.unhook_all()
-        except Exception as e:
-            log.error("Failed to unregister hotkeys", error=str(e))
+        # Remove signal handler
+        self._remove_signal_handler()
+
+        # Only try to unhook if keyboard library is available
+        if _keyboard_available:
+            try:
+                keyboard.unhook_all()
+            except Exception as e:
+                log.error("Failed to unregister hotkeys", error=str(e))
 
     def _register_hold_hotkey(self):
         """Register hold-to-record hotkey with press/release handling."""
@@ -334,27 +427,43 @@ class HotkeyService:
         self._cancel_max_timer()
         self._hold_active = False
         self._toggle_active = False
+        self._signal_recording = False
 
     def force_deactivate(self):
-        """Manually force deactivation of either mode."""
+        """Manually force deactivation of any recording mode."""
         log.debug("Force deactivate called")
         if self._hold_active:
             self._deactivate_hold()
         elif self._toggle_active:
             self._deactivate_toggle()
+        elif self._signal_recording:
+            self._signal_recording = False
+            log.info("Signal recording deactivated")
+            if self._on_deactivate:
+                self._on_deactivate()
 
     def is_running(self) -> bool:
         """Return True if the hotkey service is running."""
         return self._running
 
     def is_recording(self) -> bool:
-        """Return True if currently recording in either mode."""
-        return self._hold_active or self._toggle_active
+        """Return True if currently recording in any mode."""
+        return self._hold_active or self._toggle_active or self._signal_recording
 
     def get_active_mode(self) -> Optional[str]:
-        """Return current active mode ('hold', 'toggle') or None."""
+        """Return current active mode ('hold', 'toggle', 'signal') or None."""
         if self._hold_active:
             return "hold"
         elif self._toggle_active:
             return "toggle"
+        elif self._signal_recording:
+            return "signal"
         return None
+
+    def is_signal_mode_available(self) -> bool:
+        """Return True if signal-based hotkeys are available (Unix only)."""
+        return sys.platform != "win32"
+
+    def is_keyboard_mode_available(self) -> bool:
+        """Return True if keyboard library hotkeys are available."""
+        return _keyboard_available

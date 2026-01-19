@@ -2,9 +2,11 @@ from typing import Optional, Callable, TypedDict
 import threading
 import time
 import os
+import sys
 import base64
 import wave
 import sqlite3
+import atexit
 from pathlib import Path
 import numpy as np
 
@@ -24,6 +26,10 @@ class AudioAttachmentMeta(TypedDict):
     audio_duration_ms: int
     audio_size_bytes: int
     audio_mime: str
+
+
+# PID file path for signal-based hotkeys
+PID_FILE = Path(os.path.expanduser("~/.VoiceFlow/voiceflow.pid"))
 
 
 class AppController:
@@ -77,6 +83,9 @@ class AppController:
         """Initialize the app - load model and start hotkey listener."""
         settings = self.settings_service.get_settings()
 
+        # Write PID file for signal-based hotkeys (Linux)
+        self._write_pid_file()
+
         # Set initial microphone
         mic_id = settings.microphone if settings.microphone >= 0 else None
         self.audio_service.set_device(mic_id)
@@ -116,6 +125,56 @@ class AppController:
         """Clean shutdown."""
         self.hotkey_service.stop()
         self.transcription_service.unload_model()
+        self._remove_pid_file()
+
+    def _write_pid_file(self):
+        """Write PID file for signal-based hotkeys.
+
+        On Linux, external tools can send SIGUSR2 to toggle recording:
+        kill -USR2 $(cat ~/.VoiceFlow/voiceflow.pid)
+        """
+        if sys.platform == "win32":
+            return  # PID files not needed on Windows
+
+        try:
+            # Ensure directory exists
+            PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write PID
+            PID_FILE.write_text(str(os.getpid()))
+            info(f"PID file written: {PID_FILE}")
+
+            # Register cleanup on exit
+            atexit.register(self._remove_pid_file)
+        except Exception as e:
+            warning(f"Failed to write PID file: {e}")
+
+    def _remove_pid_file(self):
+        """Remove PID file on shutdown."""
+        try:
+            if PID_FILE.exists():
+                PID_FILE.unlink()
+                debug("PID file removed")
+        except Exception as e:
+            warning(f"Failed to remove PID file: {e}")
+
+    def get_pid_file_path(self) -> str:
+        """Get the path to the PID file.
+
+        Returns:
+            Path to PID file as string
+        """
+        return str(PID_FILE)
+
+    def get_signal_command(self) -> str:
+        """Get the shell command to trigger recording toggle via signal.
+
+        Returns:
+            Shell command string for triggering SIGUSR2
+        """
+        if sys.platform == "win32":
+            return ""
+        return f"kill -USR2 $(cat {PID_FILE})"
 
     def _handle_hotkey_activate(self):
         """Called when hotkey is pressed."""

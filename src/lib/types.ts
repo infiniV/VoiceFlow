@@ -119,3 +119,25 @@ export interface CudnnDownloadProgress {
   success: boolean;
   status: string;
 }
+
+export interface ClipboardStatus {
+  platform: string;
+  method: string;
+  available: boolean;
+  inputTool?: string | null;
+  clipboardTool?: string | null;
+  displayServer?: string;
+}
+
+export interface PlatformInfo {
+  platform: "linux" | "darwin" | "win32";
+  displayServer: "wayland" | "x11" | "macos" | "windows" | "unknown";
+  availableTools: string[];
+  preferredInputTool: string | null;
+  preferredClipboardTool: string | null;
+  nativeHotkeysSupported: boolean;
+  signalHotkeysAvailable: boolean;
+  pidFilePath: string;
+  signalCommand: string;
+  clipboardStatus: ClipboardStatus;
+}

@@ -3,6 +3,7 @@ from pyloid.rpc import PyloidRPC, RPCContext
 from app_controller import get_controller
 from services.logger import get_logger
 from services.model_manager import get_model_manager, CancelToken, DownloadProgress
+from services import platform as plat
 import threading
 
 log = get_logger("window")
@@ -474,3 +475,44 @@ async def clear_model_cache():
     manager = get_model_manager()
     result = manager.clear_cache()
     return result
+
+
+# Platform Info RPC Methods
+
+@server.method()
+async def get_platform_info():
+    """Get platform information including display server and available tools.
+
+    Returns comprehensive platform info for Linux support:
+    - platform: 'linux', 'darwin', 'win32'
+    - displayServer: 'wayland', 'x11', 'macos', 'windows'
+    - availableTools: list of available input/clipboard tools
+    - preferredInputTool: best tool for text input
+    - preferredClipboardTool: best tool for clipboard
+    - nativeHotkeysSupported: whether keyboard library works
+    - signalHotkeysAvailable: whether SIGUSR2 is available
+    - pidFilePath: path to PID file for signal triggering
+    - signalCommand: shell command to trigger recording
+    """
+    controller = get_controller()
+    info = plat.get_platform_info()
+
+    # Add controller-specific info
+    info["pidFilePath"] = controller.get_pid_file_path()
+    info["signalCommand"] = controller.get_signal_command()
+
+    # Add clipboard service status
+    info["clipboardStatus"] = controller.clipboard_service.get_platform_status()
+
+    return info
+
+
+@server.method()
+async def get_signal_command():
+    """Get the shell command to trigger recording via SIGUSR2 signal.
+
+    Returns:
+        Shell command string, or empty string on Windows
+    """
+    controller = get_controller()
+    return {"command": controller.get_signal_command()}

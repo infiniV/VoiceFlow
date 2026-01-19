@@ -24,9 +24,13 @@ import {
   Hand,
   ToggleRight,
   HardDrive,
+  Terminal,
+  Copy,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Settings, Options, GpuInfo } from "@/lib/types";
+import type { Settings, Options, GpuInfo, PlatformInfo } from "@/lib/types";
 import { ModelDownloadModal } from "./ModelDownloadModal";
 import { HotkeyCapture } from "./HotkeyCapture";
 import {
@@ -56,18 +60,23 @@ export function SettingsTab() {
   const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
+  // Platform info state (for Linux support)
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfo | null>(null);
+
   const loadSettings = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [settingsData, optionsData, gpuData] = await Promise.all([
+      const [settingsData, optionsData, gpuData, platformData] = await Promise.all([
         api.getSettings(),
         api.getOptions(),
         api.getGpuInfo(),
+        api.getPlatformInfo(),
       ]);
       setSettings(settingsData);
       setOptions(optionsData);
       setGpuInfo(gpuData);
+      setPlatformInfo(platformData);
     } catch (error) {
       console.error("Failed to load settings:", error);
       setError("Failed to load settings. Please try again.");
@@ -530,6 +539,11 @@ export function SettingsTab() {
             </div>
           </BentoSettingCard>
 
+          {/* Linux Hotkey Setup (only shown on Linux) */}
+          {platformInfo?.platform === "linux" && (
+            <LinuxHotkeyCard platformInfo={platformInfo} />
+          )}
+
           {/* Advanced Section Divider */}
           <div className="md:col-span-6 lg:col-span-12 pt-4">
             <h2 className="text-xl font-semibold tracking-tight text-foreground mb-1">
@@ -825,6 +839,176 @@ function DangerZoneCard() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </div>
+    </BentoSettingCard>
+  );
+}
+
+// LINUX HOTKEY CARD
+function LinuxHotkeyCard({ platformInfo }: { platformInfo: PlatformInfo }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const hasInputTool = platformInfo.clipboardStatus.available;
+  const inputTool = platformInfo.preferredInputTool;
+  const displayServer = platformInfo.displayServer;
+
+  // Keybind examples for different compositors
+  const hyprlandExample = `bind = CTRL, SPACE, exec, ${platformInfo.signalCommand}`;
+  const swayExample = `bindsym Ctrl+Space exec ${platformInfo.signalCommand}`;
+
+  return (
+    <BentoSettingCard
+      title="Linux Hotkey Setup"
+      description="Configure external hotkey triggering"
+      icon={Terminal}
+      className="md:col-span-6 lg:col-span-12"
+    >
+      <div className="space-y-6">
+        {/* Status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-3 rounded-xl bg-secondary/30">
+            <div className="text-xs text-muted-foreground mb-1">Display Server</div>
+            <div className="font-medium capitalize">{displayServer}</div>
+          </div>
+          <div className="p-3 rounded-xl bg-secondary/30">
+            <div className="text-xs text-muted-foreground mb-1">Input Tool</div>
+            <div className={`font-medium ${inputTool ? "text-green-500" : "text-amber-500"}`}>
+              {inputTool || "Not installed"}
+            </div>
+          </div>
+          <div className="p-3 rounded-xl bg-secondary/30">
+            <div className="text-xs text-muted-foreground mb-1">Clipboard Tool</div>
+            <div className="font-medium">
+              {platformInfo.preferredClipboardTool || "Not installed"}
+            </div>
+          </div>
+        </div>
+
+        {/* Warning if no input tool */}
+        {!hasInputTool && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-500">Input tool required</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Install an input tool to enable text pasting:
+              </p>
+              <code className="text-xs bg-secondary/50 px-2 py-1 rounded mt-2 block">
+                {displayServer === "wayland"
+                  ? "sudo pacman -S wtype  # or: dotool, ydotool"
+                  : "sudo pacman -S xdotool  # or: ydotool"}
+              </code>
+            </div>
+          </div>
+        )}
+
+        {/* Signal Command */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Toggle Recording Command</Label>
+          <p className="text-xs text-muted-foreground">
+            Use this command in your keybind configuration to toggle recording
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-sm bg-secondary/50 px-4 py-3 rounded-xl font-mono overflow-x-auto">
+              {platformInfo.signalCommand}
+            </code>
+            <button
+              onClick={() => copyToClipboard(platformInfo.signalCommand)}
+              className="p-3 rounded-xl border border-border/50 bg-background/50 hover:bg-primary/5 hover:border-primary/30 transition-all"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-green-500" />
+              ) : (
+                <Copy className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Keybind Examples */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Keybind Examples</Label>
+
+          {displayServer === "wayland" && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-secondary/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground">Hyprland</span>
+                  <button
+                    onClick={() => copyToClipboard(hyprlandExample)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <code className="text-xs font-mono block overflow-x-auto">
+                  {hyprlandExample}
+                </code>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Add to ~/.config/hypr/hyprland.conf
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-secondary/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground">Sway</span>
+                  <button
+                    onClick={() => copyToClipboard(swayExample)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <code className="text-xs font-mono block overflow-x-auto">
+                  {swayExample}
+                </code>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Add to ~/.config/sway/config
+                </p>
+              </div>
+            </div>
+          )}
+
+          {displayServer === "x11" && (
+            <div className="p-3 rounded-xl bg-secondary/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">i3/Generic X11</span>
+                <button
+                  onClick={() => copyToClipboard(`bindsym Ctrl+space exec ${platformInfo.signalCommand}`)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Copy
+                </button>
+              </div>
+              <code className="text-xs font-mono block overflow-x-auto">
+                bindsym Ctrl+space exec {platformInfo.signalCommand}
+              </code>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                Add to ~/.config/i3/config or use your DE's keyboard shortcut settings
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Available Tools */}
+        <div className="pt-2 border-t border-border/50">
+          <div className="text-xs text-muted-foreground">
+            Detected tools: {platformInfo.availableTools.length > 0
+              ? platformInfo.availableTools.join(", ")
+              : "None"}
+          </div>
+        </div>
       </div>
     </BentoSettingCard>
   );

@@ -1,5 +1,5 @@
 import { rpc } from "pyloid-js";
-import type { Settings, HistoryEntry, Options, Stats, ModelInfo, HotkeyValidation, GpuInfo, DeviceValidation, CudnnDownloadInfo, CudnnDownloadResult, CudnnDownloadProgress } from "./types";
+import type { Settings, HistoryEntry, Options, Stats, ModelInfo, HotkeyValidation, GpuInfo, DeviceValidation, CudnnDownloadInfo, CudnnDownloadResult, CudnnDownloadProgress, PlatformInfo } from "./types";
 
 export const api = {
   async getSettings(): Promise<Settings> {
@@ -128,5 +128,14 @@ export const api = {
 
   async clearCudaLibs(): Promise<{ success: boolean }> {
     return rpc.call("clear_cuda_libs");
+  },
+
+  // Platform info (Linux support)
+  async getPlatformInfo(): Promise<PlatformInfo> {
+    return rpc.call("get_platform_info");
+  },
+
+  async getSignalCommand(): Promise<{ command: string }> {
+    return rpc.call("get_signal_command");
   },
 };
