@@ -3,9 +3,21 @@ from pyloid.utils import get_production_path, is_production
 from pyloid.serve import pyloid_serve
 from pyloid import Pyloid
 import sys
+import os
 
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import QWidget
+
+# ============================================================================
+# Cross-Platform Qt WebEngine Fix
+# ============================================================================
+# On Linux with Wayland compositors (Hyprland, Sway, etc.), Qt WebEngine has
+# rendering issues causing "Compositor returned null texture" errors and blank
+# windows. Force XWayland mode on Linux to ensure proper rendering.
+if sys.platform == 'linux' and 'WAYLAND_DISPLAY' in os.environ:
+    # Check if not already overridden by user
+    if 'QT_QPA_PLATFORM' not in os.environ:
+        os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 from server import server, register_onboarding_complete_callback, register_data_reset_callback, register_window_actions, register_download_progress_callback
 from app_controller import get_controller
