@@ -7,6 +7,10 @@ dist/
 wheels/
 *.egg-info
 
+# claude
+.claude
+.claude-flow
+.mcp.json
 # front
 node_modules
 dist-ssr
