@@ -54,6 +54,9 @@ if sys.platform.startswith('linux'):
     except Exception:
         pass
 
+    # Disable accessibility scanning — major perf bottleneck on Linux with large HTML pages
+    os.environ.setdefault('QTWEBENGINE_ENABLE_LINUX_ACCESSIBILITY', '0')
+
     # Force Qt WebEngine to use GPU rendering instead of Pyloid's software fallback
     # The libEGL/Vulkan warnings trigger Pyloid to switch to software backend,
     # but the GPU actually works — the warnings are benign on modern NVIDIA+Wayland.
@@ -62,7 +65,9 @@ if sys.platform.startswith('linux'):
         '--ignore-certificate-errors --allow-insecure-localhost '
         '--disable-gpu-driver-bug-workarounds '
         '--enable-gpu-rasterization '
-        '--enable-native-gpu-memory-buffers'
+        '--enable-native-gpu-memory-buffers '
+        '--use-gl=egl '
+        '--disable-gpu-sandbox'
     )
 
 from pyloid.tray import TrayEvent
@@ -73,7 +78,7 @@ from pyloid import Pyloid
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import QWidget
 
-from server import server, register_onboarding_complete_callback, register_data_reset_callback, register_window_actions, register_download_progress_callback
+from server import server, register_onboarding_complete_callback, register_data_reset_callback, register_window_actions, register_download_progress_callback, register_popup_visibility_callback
 from app_controller import get_controller
 from services.logger import setup_logging, get_logger
 
@@ -164,20 +169,26 @@ if not ensure_single_instance():
 # from PySide6.QtCore import Qt, QCoreApplication
 # QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
+print("[DEBUG] Creating Pyloid app...", flush=True)
 app = Pyloid(app_name="VoiceFlow", single_instance=True, server=server)
+print("[DEBUG] Pyloid app created", flush=True)
 
+print("[DEBUG] Setting icons...", flush=True)
 app.set_icon(get_production_path("src-pyloid/icons/icon.png"))
 app.set_tray_icon(get_production_path("src-pyloid/icons/icon.png"))
+print("[DEBUG] Icons set", flush=True)
 
 # Initialize thread-safe signals for cross-thread UI updates
 # Must be done after Pyloid creates QApplication
 init_signals()
 
 # Initialize controller
+print("[DEBUG] Initializing controller...", flush=True)
 controller = get_controller()
 
 # Store reference to popup window
 popup_window = None
+_popup_visible = True  # Tracks whether user wants the popup shown
 
 
 def show_dashboard():
@@ -262,7 +273,7 @@ def get_screen_info():
 def resize_popup(width: int, height: int):
     """Resize and reposition popup window."""
     global popup_window
-    if popup_window is None:
+    if popup_window is None or not _popup_visible:
         return
 
     try:
@@ -379,6 +390,8 @@ def send_popup_event(name, detail):
 def _on_recording_start_slot():
     """Slot: Actual recording start handler - runs on main thread via signal."""
     log.info("Recording started")
+    # Re-detect which monitor the cursor is on (fixes multi-monitor sticky popup)
+    get_active_monitor_info()
     # Resize to active size for recording
     resize_popup(POPUP_ACTIVE_WIDTH, POPUP_ACTIVE_HEIGHT)
     send_popup_event('popup-state', {'state': 'recording'})
@@ -479,10 +492,28 @@ def send_download_progress(event_name: str, data: dict):
     send_main_window_event(event_name, data)
 
 
+def on_popup_visibility_changed(visible: bool):
+    """Called when the showPopup setting changes."""
+    global popup_window, _popup_visible
+    _popup_visible = visible
+    if visible:
+        if popup_window is None:
+            log.info("Popup visibility enabled - creating popup")
+            init_popup()
+        else:
+            popup_window.show()
+            log.info("Popup visibility enabled - showing popup")
+    else:
+        if popup_window is not None:
+            popup_window.hide()
+            log.info("Popup visibility disabled - hiding popup")
+
+
 # Register callbacks
 register_onboarding_complete_callback(on_onboarding_complete)
 register_data_reset_callback(on_data_reset)
 register_download_progress_callback(send_download_progress)
+register_popup_visibility_callback(on_popup_visibility_changed)
 
 # Connect thread-safe signals to their slot handlers
 # Qt.QueuedConnection ensures slots run on the main thread
@@ -500,7 +531,9 @@ controller.set_ui_callbacks(
 )
 
 # Initialize controller (load model, start hotkey listener)
+print("[DEBUG] Initializing controller...", flush=True)
 controller.initialize()
+print("[DEBUG] Controller initialized", flush=True)
 
 
 # Check if onboarding is complete
@@ -535,15 +568,17 @@ register_window_actions(minimize_main_window, toggle_maximize_main_window, close
 
 
 # Main window setup
+print(f"[DEBUG] is_production={is_production()}", flush=True)
 if is_production():
+    print("[DEBUG] Serving dist-front...", flush=True)
     url = pyloid_serve(directory=get_production_path("dist-front"))
+    print(f"[DEBUG] Served at {url}", flush=True)
     # Revert to standard frame, no transparency to fix crash
+    print("[DEBUG] Creating main window...", flush=True)
     window = app.create_window(title="VoiceFlow", frame=True, transparent=False, dev_tools=False)
-    # try:
-    #     window._window.web_view.page().setBackgroundColor(QColor(0, 0, 0, 0))
-    # except Exception as e:
-    #     error(f"Failed to set transparent background: {e}")
+    print("[DEBUG] Main window created", flush=True)
     window.load_url(url)
+    print("[DEBUG] URL loaded", flush=True)
 else:
     # Dev: Standard Frame
     window = app.create_window(title="VoiceFlow", dev_tools=False, frame=True, transparent=False)
@@ -579,15 +614,22 @@ if onboarding_complete:
     # Start minimized - user can open via tray icon
     log.info("Onboarding already complete - hiding window and scheduling popup init")
     window.hide()
-    # Initialize popup after a short delay
-    QTimer.singleShot(500, init_popup)
+    # Initialize popup after a short delay (if enabled in settings)
+    show_popup = settings.get("showPopup", True)
+    _popup_visible = show_popup
+    if show_popup:
+        QTimer.singleShot(500, init_popup)
+    else:
+        log.info("Popup hidden by user preference")
 else:
     # Show maximized for onboarding experience
     window.show()
     log.info("Showing onboarding window")
     # Don't initialize popup during onboarding
 
+print(f"[DEBUG] About to call app.run(), onboarding_complete={onboarding_complete}", flush=True)
 app.run()
+print("[DEBUG] app.run() returned", flush=True)
 
 # Cleanup on exit
 controller.shutdown()

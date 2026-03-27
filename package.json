@@ -11,6 +11,8 @@
     "pyloid:watch": "uv run pyloid-watcher --path ./src-pyloid --pattern \"*.py\" --command \"uv run ./src-pyloid/main.py\"",
     "build": "tsc -b && vite build && uv run -p .venv ./src-pyloid/build/build.py",
     "build:installer": "pnpm run build && cd installer && build-installer.bat",
+    "build:installer:linux": "pnpm run build && bash installer/build-linux.sh",
+    "build:installer:macos": "pnpm run build && bash installer/build-macos.sh",
     "setup": "pnpm install && uv venv && uv sync"
   },
   "dependencies": {

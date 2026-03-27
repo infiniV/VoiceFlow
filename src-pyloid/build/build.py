@@ -37,6 +37,13 @@ else:
 
 
 if __name__ == '__main__':
+	extra_args = []
+	if get_platform() == 'linux':
+		extra_args += [
+			'--collect-all=evdev',
+			'--hidden-import=evdev',
+		]
+
 	pyinstaller(
 		main_script,
 		[
@@ -51,7 +58,7 @@ if __name__ == '__main__':
 			'--add-data=./dist-front/:./dist-front/',
 			f'--add-data={faster_whisper_assets}:faster_whisper/assets/',
 			f'--icon={icon}',
-		],
+		] + extra_args,
 	)
  
 	if get_platform() == 'windows':

@@ -1,0 +1,4 @@
+#!/bin/bash
+# AppImage entry point for VoiceFlow
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/VoiceFlow" "$@"

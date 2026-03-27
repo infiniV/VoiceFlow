@@ -48,6 +48,8 @@ class Settings:
     onboarding_complete: bool = False
     microphone: int = -1  # -1 = default device, otherwise device id
     save_audio_to_history: bool = False
+    # UI settings
+    show_popup: bool = True  # Show/hide the floating recording indicator
     # Hotkey settings
     hold_hotkey: str = "ctrl+win"
     hold_hotkey_enabled: bool = True
@@ -74,6 +76,8 @@ class SettingsService:
             onboarding_complete=self.db.get_setting("onboarding_complete", "false") == "true",
             microphone=int(self.db.get_setting("microphone", "-1")),
             save_audio_to_history=self.db.get_setting("save_audio_to_history", "false") == "true",
+            # UI settings
+            show_popup=self.db.get_setting("show_popup", "true") == "true",
             # Hotkey settings
             hold_hotkey=self.db.get_setting("hold_hotkey", "ctrl+win"),
             hold_hotkey_enabled=self.db.get_setting("hold_hotkey_enabled", "true") == "true",
@@ -99,6 +103,7 @@ class SettingsService:
         hold_hotkey_enabled: Optional[bool] = None,
         toggle_hotkey: Optional[str] = None,
         toggle_hotkey_enabled: Optional[bool] = None,
+        show_popup: Optional[bool] = None,
     ) -> Settings:
         if language is not None:
             self.db.set_setting("language", language)
@@ -118,6 +123,8 @@ class SettingsService:
             self.db.set_setting("microphone", str(microphone))
         if save_audio_to_history is not None:
             self.db.set_setting("save_audio_to_history", "true" if save_audio_to_history else "false")
+        if show_popup is not None:
+            self.db.set_setting("show_popup", "true" if show_popup else "false")
         # Hotkey settings - normalize before storing for consistent format
         if hold_hotkey is not None:
             self.db.set_setting("hold_hotkey", normalize_hotkey(hold_hotkey))

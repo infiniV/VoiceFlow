@@ -230,6 +230,7 @@ class AppController:
             "onboardingComplete": settings.onboarding_complete,
             "microphone": settings.microphone,
             "saveAudioToHistory": settings.save_audio_to_history,
+            "showPopup": settings.show_popup,
             "holdHotkey": settings.hold_hotkey,
             "holdHotkeyEnabled": settings.hold_hotkey_enabled,
             "toggleHotkey": settings.toggle_hotkey,
@@ -246,6 +247,8 @@ class AppController:
             mapped["onboarding_complete"] = kwargs["onboardingComplete"]
         if "saveAudioToHistory" in kwargs:
             mapped["save_audio_to_history"] = kwargs["saveAudioToHistory"]
+        if "showPopup" in kwargs:
+            mapped["show_popup"] = kwargs["showPopup"]
         # Hotkey settings (camelCase to snake_case)
         if "holdHotkey" in kwargs:
             mapped["hold_hotkey"] = kwargs["holdHotkey"]

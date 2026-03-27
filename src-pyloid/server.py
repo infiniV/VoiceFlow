@@ -13,6 +13,7 @@ server = PyloidRPC()
 # Callbacks that main.py will register
 _on_onboarding_complete = None
 _on_data_reset = None
+_on_popup_visibility_changed = None  # Callback when showPopup setting changes
 _send_download_progress = None  # Callback to send progress to frontend
 
 # Active download state
@@ -24,6 +25,12 @@ def register_download_progress_callback(callback):
     """Register callback to send download progress to frontend."""
     global _send_download_progress
     _send_download_progress = callback
+
+
+def register_popup_visibility_callback(callback):
+    """Register callback for when showPopup setting changes."""
+    global _on_popup_visibility_changed
+    _on_popup_visibility_changed = callback
 
 
 def register_onboarding_complete_callback(callback):
@@ -56,6 +63,7 @@ async def update_settings(
     onboardingComplete: Optional[bool] = None,
     microphone: Optional[int] = None,
     saveAudioToHistory: Optional[bool] = None,
+    showPopup: Optional[bool] = None,
     holdHotkey: Optional[str] = None,
     holdHotkeyEnabled: Optional[bool] = None,
     toggleHotkey: Optional[str] = None,
@@ -81,6 +89,8 @@ async def update_settings(
         kwargs["microphone"] = microphone
     if saveAudioToHistory is not None:
         kwargs["saveAudioToHistory"] = saveAudioToHistory
+    if showPopup is not None:
+        kwargs["showPopup"] = showPopup
     # Hotkey settings
     if holdHotkey is not None:
         kwargs["holdHotkey"] = holdHotkey
@@ -101,6 +111,10 @@ async def update_settings(
     if onboardingComplete is True and not was_onboarding_complete and _on_onboarding_complete:
         log.info("Onboarding completed, initializing popup")
         _on_onboarding_complete()
+
+    # If showPopup changed, trigger visibility callback
+    if showPopup is not None and _on_popup_visibility_changed:
+        _on_popup_visibility_changed(showPopup)
 
     return result
 

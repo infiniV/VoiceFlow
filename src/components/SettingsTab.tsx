@@ -24,6 +24,7 @@ import {
   Hand,
   ToggleRight,
   HardDrive,
+  Eye,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Settings, Options, GpuInfo } from "@/lib/types";
@@ -422,7 +423,34 @@ export function SettingsTab() {
             </p>
           </BentoSettingCard>
 
-          {/* 7. System (Auto Start) (Span 4) */}
+          {/* 7. Recording Indicator (Span 4) */}
+          <BentoSettingCard
+            title="Recording Indicator"
+            description="Floating popup that shows recording state"
+            icon={Eye}
+            className="md:col-span-6 lg:col-span-4"
+          >
+            <div className="mt-auto flex items-center justify-between p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
+              <Label
+                htmlFor="show-popup"
+                className="font-medium cursor-pointer"
+              >
+                Show floating indicator
+              </Label>
+              <Switch
+                id="show-popup"
+                checked={settings.showPopup}
+                onCheckedChange={(checked) =>
+                  updateSetting("showPopup", checked)
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Disable to hide the small pill that appears at the bottom of your screen. Recording still works via hotkey.
+            </p>
+          </BentoSettingCard>
+
+          {/* 8. System (Auto Start) (Span 4) */}
           <BentoSettingCard
             title="System"
             description="Startup behavior"

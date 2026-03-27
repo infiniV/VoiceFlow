@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=VoiceFlow
+Comment=Voice-to-text paste utility
+Exec=VoiceFlow
+Icon=voiceflow
+Categories=AudioVideo;Audio;Utility;
+Terminal=false
+StartupNotify=true
+StartupWMClass=VoiceFlow

@@ -539,3 +539,54 @@
     );
     z-index: -1;
 }
+
+/* ============================================================================
+   Reduced Effects Mode (Linux / software rendering)
+   Qt WebEngine on Linux often falls back to CPU compositing.
+   backdrop-filter, large blurs, and animated orbs are extremely expensive
+   without GPU acceleration - they block scrolling for seconds.
+   ============================================================================ */
+.reduced-effects .glass,
+.reduced-effects .glass-strong,
+.reduced-effects .glass-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.reduced-effects .glass {
+    background: var(--background) !important;
+}
+
+.reduced-effects .glass-strong {
+    background: var(--card) !important;
+}
+
+.reduced-effects .glass-card {
+    background: var(--card) !important;
+}
+
+.reduced-effects .bg-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Disable expensive noise texture overlay */
+.reduced-effects body::before,
+.reduced-effects::before {
+    display: none !important;
+}
+
+/* Disable animated blurred orbs */
+.reduced-effects .orb {
+    display: none !important;
+}
+
+/* Disable grid background pattern */
+.reduced-effects .bg-grid {
+    background-image: none !important;
+}
+
+/* Disable hero blur */
+.reduced-effects .hero-visual::before {
+    filter: none !important;
+}

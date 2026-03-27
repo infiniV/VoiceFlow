@@ -33,10 +33,22 @@ class ClipboardService:
         else:
             self._paste_tool = None
 
-        if not IS_WAYLAND or not self._paste_tool:
-            import pyautogui
-            pyautogui.FAILSAFE = False
-            pyautogui.PAUSE = 0.05
+        # pyautogui is imported lazily in _get_pyautogui() to avoid
+        # mouseinfo's sys.exit() when tkinter is missing in bundled builds
+        self._pyautogui = None
+
+    def _get_pyautogui(self):
+        """Lazy-load pyautogui to avoid mouseinfo's sys.exit() on missing tkinter."""
+        if self._pyautogui is None:
+            try:
+                import pyautogui
+                pyautogui.FAILSAFE = False
+                pyautogui.PAUSE = 0.05
+                self._pyautogui = pyautogui
+            except (ImportError, SystemExit) as e:
+                log.error("pyautogui unavailable", error=str(e))
+                raise RuntimeError("pyautogui is not available - install tkinter or a Wayland paste tool (wtype/dotool/ydotool)")
+        return self._pyautogui
 
     def copy_to_clipboard(self, text: str):
         """Copy text to clipboard."""
@@ -75,8 +87,7 @@ class ClipboardService:
                             tool=self._paste_tool, error=str(e))
 
         # Fallback: pyautogui (works via XWayland)
-        import pyautogui
-        pyautogui.hotkey('ctrl', 'v')
+        self._get_pyautogui().hotkey('ctrl', 'v')
 
     def paste_at_cursor(self, text: str):
         """Copy text to clipboard and paste at current cursor position."""

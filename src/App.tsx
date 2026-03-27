@@ -8,6 +8,14 @@ import { Toaster } from "@/components/ui/sonner";
 import { ModelRecoveryModal } from "@/components/ModelRecoveryModal";
 import type { Settings } from "@/lib/types";
 
+// Detect Linux platform and add reduced-effects class
+// Qt WebEngine on Linux often falls back to software rendering,
+// making backdrop-filter/blur extremely expensive
+// Skip for popup route - it needs transparent background
+if (navigator.platform.startsWith("Linux") && window.location.hash !== "#/popup") {
+  document.documentElement.classList.add("reduced-effects");
+}
+
 // Apply theme to document
 function applyTheme(theme: Settings["theme"]) {
   const root = document.documentElement;
