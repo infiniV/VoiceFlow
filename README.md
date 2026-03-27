@@ -8,11 +8,17 @@
 
 **Dictate freely with local AI. Zero latency. Zero data leaks. Zero cost.**
 
-VoiceFlow brings OpenAI's Whisper directly to your Windows machine. Every word you speak is processed entirely on your hardware—your voice data never leaves your device. Built for privacy-conscious professionals who demand speed and reliability.
+VoiceFlow brings OpenAI's Whisper directly to your machine. Every word you speak is processed entirely on your hardware—your voice data never leaves your device. Built for privacy-conscious professionals who demand speed and reliability.
+
+> **New: Linux Support (Experimental)**
+> VoiceFlow now runs on Linux with Wayland-native input, evdev hotkeys, and AppImage packaging. [Download the Linux release](https://github.com/infiniV/VoiceFlow/releases/tag/v1.4.0-linux-experimental)
 
 <p align="center">
   <a href="https://github.com/infiniV/VoiceFlow/releases/download/v1.3.1/VoiceFlowSetup-1.3.1.exe">
     <img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=windows&logoColor=white" alt="Download">
+  </a>
+  <a href="https://github.com/infiniV/VoiceFlow/releases/tag/v1.4.0-linux-experimental">
+    <img src="https://img.shields.io/badge/Download_for_Linux_(Experimental)-000000?style=for-the-badge&logo=linux&logoColor=white" alt="Download Linux">
   </a>
   <a href="https://github.com/infiniV/VoiceFlow">
     <img src="https://img.shields.io/badge/View_Source-000000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">

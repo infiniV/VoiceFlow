@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VoiceFlow is a voice-to-text paste utility for Windows built with Pyloid (Python desktop framework using PySide6/Qt WebEngine) and React. Users hold a hotkey to record audio, release to transcribe using faster-whisper, and the text is automatically pasted at the cursor.
+VoiceFlow is a cross-platform voice-to-text paste utility built with Pyloid (Python desktop framework using PySide6/Qt WebEngine) and React. Users hold a hotkey to record audio, release to transcribe using faster-whisper, and the text is automatically pasted at the cursor. Supports Windows, Linux (Wayland/X11), and macOS.
 
 ## Commands
 
@@ -20,6 +20,11 @@ pnpm run dev:watch
 
 # Build desktop application
 pnpm run build
+
+# Build platform installers (run on each target OS)
+pnpm run build:installer          # Windows (.exe via Inno Setup)
+pnpm run build:installer:linux    # Linux (.tar.gz + .AppImage)
+pnpm run build:installer:macos    # macOS (.dmg)
 
 # Run Python tests
 cd VoiceFlow && uv run -p .venv pytest src-pyloid/tests/
@@ -128,6 +133,17 @@ For transparent popup windows on Windows:
 - **Domain logging**: All services use `get_logger(domain)` for structured logging with domains like `model`, `audio`, `hotkey`, etc.
 - **Custom hotkeys**: Supports modifier-only combos (e.g., Ctrl+Win) and standard combos (e.g., Ctrl+R). Frontend captures keys, backend validates and registers.
 - **Path alias**: Frontend uses `@/` for `src/` imports (configured in tsconfig.json and vite.config.ts)
+- **Lazy pyautogui**: `ClipboardService` lazy-loads pyautogui via `_get_pyautogui()` to avoid `mouseinfo`'s `sys.exit()` when tkinter is missing in bundled builds
+- **Reduced effects on Linux**: `App.tsx` adds `reduced-effects` class on Linux to disable `backdrop-filter`, animated orbs, and noise texture that cause sluggish UI under Qt WebEngine software rendering. Popup route is excluded (needs transparency).
+- **Popup visibility**: `showPopup` setting controls the floating recording indicator. Backend uses `_popup_visible` flag and `on_popup_visibility_changed()` callback. When hidden, `resize_popup()` is skipped to prevent re-showing.
+
+### Linux-Specific
+
+- **evdev hotkeys**: Linux uses `evdev` for keyboard input instead of `keyboard` library (Wayland-compatible)
+- **Wayland clipboard**: Uses `wl-copy` for clipboard, `wtype`/`dotool`/`ydotool` for paste keystroke, falls back to pyautogui via XWayland
+- **Qt WebEngine flags**: `QTWEBENGINE_ENABLE_LINUX_ACCESSIBILITY=0` and Chromium flags (`--use-gl=egl`, `--disable-gpu-sandbox`) set in `main.py` to improve rendering performance
+- **Hyprland rules**: `_setup_hyprland_window_rules()` in `main.py` configures popup as floating, pinned, no-focus via `hyprctl`
+- **Multi-monitor**: `get_active_monitor_info()` re-detects cursor monitor on each recording start
 
 ## Testing
 
