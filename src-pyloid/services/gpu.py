@@ -76,9 +76,18 @@ def _check_cudnn_available() -> tuple[bool, Optional[str]]:
         Tuple of (is_available, error_message)
     """
     if sys.platform != "win32":
-        # On Linux, cuDNN is either bundled into ctranslate2 or not required.
-        # The nvidia cublas pip packages (preloaded at startup) provide what's needed.
-        return True, None
+        # On Linux, verify that libcublas is actually loadable at runtime.
+        # ctranslate2 can detect CUDA device presence without libcublas, but
+        # inference will fail if the library isn't available.
+        import ctypes
+        for lib_name in ("libcublas.so.12", "libcublas.so.11", "libcublas.so"):
+            try:
+                ctypes.CDLL(lib_name)
+                return True, None
+            except OSError:
+                continue
+        log.warning("libcublas not loadable on Linux, CUDA disabled")
+        return False, "CUDA libraries not found. Install nvidia-cuda-toolkit or use CPU mode."
 
     # First, add local cuDNN to PATH if it exists
     _add_local_cudnn_to_path()

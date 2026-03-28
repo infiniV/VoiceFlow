@@ -118,16 +118,38 @@ class TranscriptionService:
 
         log.debug("Audio stats", length=len(audio), max_amplitude=float(np.abs(audio).max()), mean_amplitude=float(np.abs(audio).mean()))
 
-        segments, info = self._model.transcribe(
-            audio,
-            language=language_arg,
-            beam_size=5,
-            vad_filter=True,
-            vad_parameters=dict(
-                min_silence_duration_ms=500,  # Less aggressive silence detection
-                speech_pad_ms=400,  # More padding around speech
-            ),
-        )
+        try:
+            segments, info = self._model.transcribe(
+                audio,
+                language=language_arg,
+                beam_size=5,
+                vad_filter=True,
+                vad_parameters=dict(
+                    min_silence_duration_ms=500,  # Less aggressive silence detection
+                    speech_pad_ms=400,  # More padding around speech
+                ),
+            )
+        except RuntimeError as e:
+            if "not found or cannot be loaded" in str(e) and self._current_device == "cuda":
+                log.warning("CUDA runtime error during transcription, reloading on CPU", error=str(e))
+                model_name = self._current_model_name
+                repo_id = _get_repo_id(model_name)
+                self._model = WhisperModel(repo_id, device="cpu", compute_type="int8")
+                self._current_device = "cpu"
+                self._current_compute_type = "int8"
+                log.info("Model reloaded on CPU fallback")
+                segments, info = self._model.transcribe(
+                    audio,
+                    language=language_arg,
+                    beam_size=5,
+                    vad_filter=True,
+                    vad_parameters=dict(
+                        min_silence_duration_ms=500,
+                        speech_pad_ms=400,
+                    ),
+                )
+            else:
+                raise
 
         # Combine all segments
         segments_list = list(segments)

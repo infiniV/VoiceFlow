@@ -67,12 +67,32 @@ class ClipboardService:
             import pyperclip
             pyperclip.copy(text)
 
+    def _type_text_directly(self, text: str) -> bool:
+        """Type text directly using Wayland input tool. Returns True on success."""
+        try:
+            if self._paste_tool == 'wtype':
+                subprocess.run(['wtype', '--', text], check=True, timeout=10)
+            elif self._paste_tool == 'dotool':
+                # dotool type command types text directly
+                subprocess.run(['dotool'], input=f'type {text}\n'.encode(),
+                               check=True, timeout=10)
+            elif self._paste_tool == 'ydotool':
+                subprocess.run(['ydotool', 'type', '--', text],
+                               check=True, timeout=10)
+            else:
+                return False
+            log.debug("Text typed directly via", tool=self._paste_tool)
+            return True
+        except (subprocess.SubprocessError, OSError) as e:
+            log.warning("Direct type failed", tool=self._paste_tool, error=str(e))
+            return False
+
     def _simulate_paste_keystroke(self):
         """Send Ctrl+V using the best available tool."""
         if IS_WAYLAND and self._paste_tool:
             try:
                 if self._paste_tool == 'wtype':
-                    subprocess.run(['wtype', '-M', 'ctrl', '-P', 'v', '-m', 'ctrl'],
+                    subprocess.run(['wtype', '-M', 'ctrl', '-k', 'v', '-m', 'ctrl'],
                                    check=True, timeout=5)
                 elif self._paste_tool == 'dotool':
                     subprocess.run(['dotool'], input=b'key ctrl+v\n',
@@ -93,19 +113,26 @@ class ClipboardService:
         """Copy text to clipboard and paste at current cursor position."""
         log.debug("Paste at cursor called", text_length=len(text))
 
-        # Copy our text to clipboard
+        # Always copy to clipboard so user can re-paste manually if needed
         self.copy_to_clipboard(text)
         log.debug("Text copied to clipboard")
 
-        # Small delay to ensure clipboard is updated
+        # On Wayland, type text directly — works in terminals (Ctrl+V doesn't)
+        # and all other apps, regardless of their paste shortcut.
+        if IS_WAYLAND and self._paste_tool:
+            if self._type_text_directly(text):
+                log.debug("Paste complete via direct type")
+                return
+            # Direct type failed — fall through to Ctrl+V
+            log.warning("Direct type failed, falling back to Ctrl+V")
+
+        # Small delay to ensure clipboard is ready
         time.sleep(0.1)
 
-        # Simulate Ctrl+V
         log.debug("Simulating Ctrl+V")
         self._simulate_paste_keystroke()
         log.debug("Paste command sent")
 
-        # Small delay after paste
         time.sleep(0.1)
 
     def get_clipboard(self) -> str:
