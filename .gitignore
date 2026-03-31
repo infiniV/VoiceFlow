@@ -18,9 +18,6 @@ dist-front
 # Virtual environments
 .venv
 
-# uv
-uv.lock
-
 # pyinstaller
 dist
 
@@ -29,9 +26,6 @@ package-lock.json
 
 # yarn
 yarn.lock
-
-# pnpm
-pnpm-lock.yaml
 
 # bun
 bun-lock.yaml
