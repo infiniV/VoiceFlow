@@ -81,9 +81,9 @@ jobs:
         run: |
           # python-build-standalone builds ship libpython with GNU_STACK RWE,
           # which Linux 6.8+ kernels reject. Clear the flag on all bundled .so files.
-          find ./dist/VoiceFlow -name '*.so*' -exec execstack -c {} +
+          find ./dist/VoiceFlow -type f -name '*.so*' -exec execstack -c {} +
           echo "Verifying no executable stacks remain..."
-          BAD=$(find ./dist/VoiceFlow -name '*.so*' -exec sh -c \
+          BAD=$(find ./dist/VoiceFlow -type f -name '*.so*' -exec sh -c \
             'readelf -l "$1" 2>/dev/null | grep -A1 GNU_STACK | grep -q RWE && echo "$1"' _ {} \;)
           if [ -n "$BAD" ]; then
             echo "::error::Files still have executable stack: $BAD"
