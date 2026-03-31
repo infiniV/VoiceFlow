@@ -58,8 +58,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          uv python install 3.12
-          uv venv --python 3.12 .venv
+          uv python install 3.13
+          uv venv --python 3.13 .venv
           uv sync
 
       - name: Determine version
@@ -130,8 +130,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          uv python install 3.12
-          uv venv --python 3.12 .venv
+          uv python install 3.13
+          uv venv --python 3.13 .venv
           uv sync
 
       - name: Determine version
