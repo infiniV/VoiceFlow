@@ -36,14 +36,14 @@ jobs:
             libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 \
             libnss3 libasound2 libfuse2
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -106,14 +106,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
