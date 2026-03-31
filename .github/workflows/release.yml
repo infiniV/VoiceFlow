@@ -150,9 +150,6 @@ jobs:
       - name: Build application
         run: pnpm run build
 
-      - name: Install Inno Setup
-        run: choco install innosetup --version=6.2.2 -y --no-progress
-
       - name: Patch installer version
         shell: bash
         run: |
