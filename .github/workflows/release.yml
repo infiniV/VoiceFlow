@@ -34,7 +34,7 @@ jobs:
             libgl1-mesa-dev libegl1-mesa-dev libxkbcommon0 libfontconfig1 \
             libdbus-1-3 libxcb-xinerama0 libxcb-cursor0 libxcb-shape0 \
             libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 \
-            libnss3 libasound2 libfuse2
+            libnss3 libasound2 libfuse2 execstack
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -58,8 +58,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          uv python install 3.13
-          uv venv --python 3.13 .venv
+          uv python install 3.12
+          uv venv --python 3.12 .venv
           uv sync
 
       - name: Determine version
@@ -76,6 +76,19 @@ jobs:
 
       - name: Build application
         run: pnpm run build
+
+      - name: Clear executable stack flags
+        run: |
+          # python-build-standalone builds ship libpython with GNU_STACK RWE,
+          # which Linux 6.8+ kernels reject. Clear the flag on all bundled .so files.
+          find ./dist/VoiceFlow -name '*.so*' -exec execstack -c {} +
+          echo "Verifying no executable stacks remain..."
+          BAD=$(find ./dist/VoiceFlow -name '*.so*' -exec sh -c \
+            'readelf -l "$1" 2>/dev/null | grep -A1 GNU_STACK | grep -q RWE && echo "$1"' _ {} \;)
+          if [ -n "$BAD" ]; then
+            echo "::error::Files still have executable stack: $BAD"
+            exit 1
+          fi
 
       - name: Smoke test - check for missing shared libraries
         run: |
@@ -130,8 +143,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          uv python install 3.13
-          uv venv --python 3.13 .venv
+          uv python install 3.12
+          uv venv --python 3.12 .venv
           uv sync
 
       - name: Determine version
