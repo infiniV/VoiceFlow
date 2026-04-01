@@ -42,6 +42,9 @@ if __name__ == '__main__':
 		extra_args += [
 			'--collect-all=evdev',
 			'--hidden-import=evdev',
+			# Don't bundle PortAudio - use system's libportaudio which has
+			# PipeWire/PulseAudio backends. Ubuntu's PortAudio only has ALSA.
+			'--exclude-module=_sounddevice_data',
 		]
 
 	pyinstaller(
