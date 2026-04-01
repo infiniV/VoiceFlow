@@ -9,7 +9,7 @@ log = get_logger("audio")
 
 
 class AudioService:
-    SAMPLE_RATE = 16000  # Whisper expects 16kHz
+    TARGET_SAMPLE_RATE = 16000  # Whisper expects 16kHz
     CHANNELS = 1  # Mono
     DTYPE = np.float32
 
@@ -20,6 +20,7 @@ class AudioService:
         self._stream: Optional[sd.InputStream] = None
         self._amplitude_callback: Optional[Callable[[float], None]] = None
         self._device_id: Optional[int] = None  # None = default device
+        self._actual_sample_rate: int = self.TARGET_SAMPLE_RATE
 
     def set_device(self, device_id: Optional[int]):
         """Set the input device to use. None for default."""
@@ -62,16 +63,34 @@ class AudioService:
                 break
 
         log.info("Starting recording", device_id=self._device_id)
-        self._stream = sd.InputStream(
-            samplerate=self.SAMPLE_RATE,
-            channels=self.CHANNELS,
-            dtype=self.DTYPE,
-            callback=self._audio_callback,
-            blocksize=1024,
-            device=self._device_id,
-        )
+
+        # Try 16kHz first (Whisper's native rate), fall back to device default
+        self._actual_sample_rate = self.TARGET_SAMPLE_RATE
+        try:
+            self._stream = sd.InputStream(
+                samplerate=self.TARGET_SAMPLE_RATE,
+                channels=self.CHANNELS,
+                dtype=self.DTYPE,
+                callback=self._audio_callback,
+                blocksize=1024,
+                device=self._device_id,
+            )
+        except sd.PortAudioError:
+            device_info = sd.query_devices(self._device_id, 'input')
+            fallback_rate = int(device_info['default_samplerate'])
+            log.warning("16kHz not supported, using device default",
+                        fallback_rate=fallback_rate)
+            self._actual_sample_rate = fallback_rate
+            self._stream = sd.InputStream(
+                samplerate=fallback_rate,
+                channels=self.CHANNELS,
+                dtype=self.DTYPE,
+                callback=self._audio_callback,
+                blocksize=1024,
+                device=self._device_id,
+            )
         self._stream.start()
-        log.debug("Recording started")
+        log.debug("Recording started", sample_rate=self._actual_sample_rate)
 
     def stop_recording(self) -> np.ndarray:
         if not self._recording:
@@ -98,6 +117,17 @@ class AudioService:
         # Concatenate all chunks
         audio = np.concatenate(self._audio_data)
         self._audio_data = []
+
+        # Resample to 16kHz if recorded at a different rate
+        if self._actual_sample_rate != self.TARGET_SAMPLE_RATE:
+            ratio = self.TARGET_SAMPLE_RATE / self._actual_sample_rate
+            new_length = int(len(audio) * ratio)
+            indices = np.linspace(0, len(audio) - 1, new_length)
+            audio = np.interp(indices, np.arange(len(audio)), audio).astype(self.DTYPE)
+            log.debug("Resampled audio",
+                      from_rate=self._actual_sample_rate,
+                      to_rate=self.TARGET_SAMPLE_RATE,
+                      samples=new_length)
 
         return audio
 

@@ -1,6 +1,6 @@
 [project]
 name = "VoiceFlow"
-version = "1.3.2"
+version = "1.4.0"
 readme = "README.md"
 description = "Voice-to-text paste utility"
 
