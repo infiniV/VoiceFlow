@@ -34,7 +34,8 @@ jobs:
             libgl1-mesa-dev libegl1-mesa-dev libxkbcommon0 libfontconfig1 \
             libdbus-1-3 libxcb-xinerama0 libxcb-cursor0 libxcb-shape0 \
             libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 \
-            libnss3 libasound2 libfuse2 execstack
+            libnss3 libasound2 libfuse2 execstack \
+            libportaudio2 portaudio19-dev
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
