@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Trash2, Search, Mic, FileAudio, X } from "lucide-react";
+import { Copy, Trash2, Search, Globe, FileAudio, X } from "lucide-react";
 import { toast } from "sonner";
 import { StatsHeader } from "@/components/StatsHeader";
+import { RecordingOrb } from "@/components/RecordingOrb";
 import { api } from "@/lib/api";
 import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,16 @@ export function HomePage() {
   const [loadingAudioFor, setLoadingAudioFor] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordToggling, setRecordToggling] = useState(false);
+  const [language, setLanguage] = useState("auto");
+  const [rewritePreset, setRewritePreset] = useState("grammar_correct");
   const lastHistoryIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    api.getSettings().then((s) => {
+      setLanguage(s.language);
+      setRewritePreset(s.rewritePreset ?? "grammar_correct");
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -206,36 +216,61 @@ export function HomePage() {
 
   return (
     <>
-      <div className="min-h-full w-full bg-background">
-        <div className="w-full max-w-5xl mx-auto px-6 md:px-10 py-10 md:py-16 space-y-12">
-          <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3 min-w-0">
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-cream-muted/60">
-                {formatDateLine(new Date())}
-              </p>
-              <h1 className="font-display text-4xl md:text-5xl font-medium tracking-tight text-cream leading-[1.05]">
-                Dashboard
-              </h1>
-              <p className="text-sm text-cream-muted max-w-xl leading-relaxed">
-                Your local dictation log. Press your hotkey anywhere to capture, or use the button.
-              </p>
+      <div className="min-h-full w-full bg-background relative overflow-hidden">
+        {/* Ambient orbs — VoiceKey style */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="orb orb-primary -top-32 -left-32" />
+          <div className="orb orb-secondary top-1/3 -right-24" />
+        </div>
+
+        <div className="relative w-full max-w-5xl mx-auto px-6 md:px-10 py-8 md:py-12 space-y-12">
+          {/* Record hero — iOS RecordingView parity */}
+          <section className="flex flex-col items-center text-center pt-4 md:pt-8 pb-6">
+            <div className="flex items-center gap-2 mb-8 self-start md:self-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full accent-gradient-bg text-white text-xs font-semibold tracking-wide">
+                <Globe className="w-3 h-3" strokeWidth={2.5} />
+                {language === "auto" ? "AUTO" : language.toUpperCase()}
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-cream-muted/50 px-2 py-1 rounded-full border border-border">
+                {rewritePreset.replace(/_/g, " ")}
+              </span>
             </div>
-            <RecordButton
+
+            <RecordingOrb
               isRecording={isRecording}
-              disabled={recordToggling}
               onClick={handleToggleRecording}
+              disabled={recordToggling}
+              size="lg"
             />
-          </header>
+
+            <p className="mt-8 text-sm text-cream-muted max-w-sm leading-relaxed">
+              {isRecording
+                ? "Listening… release your hotkey or tap the orb to stop."
+                : "Tap the orb or press your hotkey anywhere to dictate."}
+            </p>
+
+            {isRecording && (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.3em] text-recording-active">
+                recording
+              </p>
+            )}
+          </section>
 
           <StatsHeader todayStats={todayStats} />
 
           <div className="border-t border-border" />
 
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            count={filteredHistory.length}
-          />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="font-display text-xl font-medium text-cream tracking-tight">
+                Recent
+              </h2>
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                count={filteredHistory.length}
+              />
+            </div>
 
           {loading ? (
             <LogSkeleton />
@@ -258,6 +293,7 @@ export function HomePage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -276,47 +312,6 @@ export function HomePage() {
         }}
       />
     </>
-  );
-}
-
-function RecordButton({
-  isRecording,
-  disabled,
-  onClick,
-}: {
-  isRecording: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={isRecording}
-      aria-label={isRecording ? "Stop recording" : "Start recording"}
-      className={cn(
-        "h-11 px-6 rounded-md font-medium text-sm transition-colors flex items-center gap-2.5 flex-shrink-0 self-start md:self-auto disabled:opacity-60 disabled:cursor-not-allowed",
-        isRecording
-          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          : "bg-accent-500 text-zinc-950 hover:bg-accent-600"
-      )}
-    >
-      {isRecording ? (
-        <>
-          <span className="relative inline-flex w-2.5 h-2.5">
-            <span className="absolute inset-0 rounded-full bg-current animate-ping opacity-50" />
-            <span className="relative w-2.5 h-2.5 rounded-full bg-current" />
-          </span>
-          Stop
-        </>
-      ) : (
-        <>
-          <Mic className="w-4 h-4" strokeWidth={2.5} />
-          Record
-        </>
-      )}
-    </button>
   );
 }
 
@@ -624,14 +619,6 @@ function AudioPlayerDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function formatDateLine(date: Date): string {
-  const weekday = date.toLocaleDateString([], { weekday: "long" });
-  const month = date.toLocaleDateString([], { month: "long" });
-  const day = date.getDate();
-  const year = date.getFullYear();
-  return `${weekday} · ${month} ${day} · ${year}`;
 }
 
 function formatTime(isoString: string): string {

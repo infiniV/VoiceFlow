@@ -258,7 +258,7 @@ function PreRecordForm(props: {
           New meeting
         </h1>
         <p className="text-sm text-cream-muted max-w-xl leading-relaxed">
-          Pick your audio sources, hit start, and VoiceFlow streams to disk.
+          Pick your audio sources, hit start, and Dictore streams to disk.
           You can pause whenever — silence is written so the timeline stays
           aligned.
         </p>

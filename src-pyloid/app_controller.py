@@ -158,7 +158,7 @@ class AppController:
         # Stop any active meeting recording before tearing down. parec /
         # sounddevice hold PipeWire / PortAudio handles that, if leaked, can
         # corrupt the global audio routing graph (observed: Teams loses
-        # inbound audio after a VoiceFlow wedge + window close). Failure is
+        # inbound audio after a Dictore wedge + window close). Failure is
         # tolerated — recover_unfinished() on the next startup will pick up
         # any partial recording.
         try:
@@ -226,6 +226,19 @@ class AppController:
                 info(f"Transcription result: '{text}'")
 
                 if text:
+                    from services.filler_words import remove_filler_words
+                    from services.rewrite import rewrite_text
+
+                    if settings.filler_removal_enabled:
+                        text = remove_filler_words(
+                            text,
+                            language=settings.language,
+                            keep_for_casual=settings.rewrite_preset == "casual_spoken",
+                        )
+
+                    if settings.auto_rewrite_enabled:
+                        text = rewrite_text(text, settings.rewrite_preset)
+
                     # Prepend space if enabled (useful for continuous dictation)
                     if settings.prepend_space:
                         text = " " + text
@@ -293,6 +306,9 @@ class AppController:
             "toggleHotkeyEnabled": settings.toggle_hotkey_enabled,
             "prependSpace": settings.prepend_space,
             "recordingsAutoRenameTitle": settings.recordings_auto_rename_title,
+            "autoRewriteEnabled": settings.auto_rewrite_enabled,
+            "rewritePreset": settings.rewrite_preset,
+            "fillerRemovalEnabled": settings.filler_removal_enabled,
         }
 
     def update_settings(self, **kwargs) -> dict:
@@ -309,6 +325,12 @@ class AppController:
             mapped["show_popup"] = kwargs["showPopup"]
         if "prependSpace" in kwargs:
             mapped["prepend_space"] = kwargs["prependSpace"]
+        if "autoRewriteEnabled" in kwargs:
+            mapped["auto_rewrite_enabled"] = kwargs["autoRewriteEnabled"]
+        if "rewritePreset" in kwargs:
+            mapped["rewrite_preset"] = kwargs["rewritePreset"]
+        if "fillerRemovalEnabled" in kwargs:
+            mapped["filler_removal_enabled"] = kwargs["fillerRemovalEnabled"]
         if "recordingsAutoRenameTitle" in kwargs:
             mapped["recordings_auto_rename_title"] = kwargs["recordingsAutoRenameTitle"]
         # Hotkey settings (camelCase to snake_case)

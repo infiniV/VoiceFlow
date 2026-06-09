@@ -15,7 +15,7 @@ faster_whisper_path = os.path.dirname(faster_whisper.__file__)
 faster_whisper_assets = os.path.join(faster_whisper_path, 'assets')
 
 main_script = './src-pyloid/main.py'
-name = 'VoiceFlow'
+name = 'Dictore'
 dist_path = './dist'
 work_path = './build'
 

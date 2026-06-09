@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  VoiceFlow theme - aligned with the GetVoiceFlow marketing site brand.
+  Dictore theme - aligned with the GetDictore marketing site brand.
   Tokens here are the single source of truth. Components reference them
   via Tailwind classes (`bg-card`, `text-foreground`, `border-border`,
   etc.) and the legacy class shims at the bottom map historical names
@@ -48,6 +48,7 @@
     --color-accent-400: var(--accent-400);
     --color-accent-500: var(--accent-500);
     --color-accent-600: var(--accent-600);
+    --color-recording-active: var(--recording-active);
 
     /* shadcn token mirroring */
     --color-card: var(--card);
@@ -69,18 +70,26 @@
     --color-ring: var(--ring);
 }
 
-:root {
-    /* Light mode */
-    --background: #fafafa;
-    --foreground: #09090b;
-    --surface: #ffffff;
-    --surface-elevated: #ffffff;
-    --cream: #09090b;
-    --cream-muted: #71717a;
+:root,
+[data-palette="midnight"] {
+    --background: #0d0d14;
+    --foreground: #f0f0f5;
+    --surface: #161622;
+    --surface-elevated: #1e1e2e;
+    --cream: #f0f0f5;
+    --cream-muted: #8888a0;
 
-    --accent-400: #4ade80;
-    --accent-500: #22c55e;
-    --accent-600: #16a34a;
+    --accent-400: #4ecdc4;
+    --accent-500: #7c6aff;
+    --accent-600: #6b5aef;
+
+    --accent-gradient-start: #7c6aff;
+    --accent-gradient-end: #4ecdc4;
+    --recording-active: #ff4d6a;
+    --recording-idle: #7c6aff;
+    --waveform-primary: #7c6aff;
+    --waveform-secondary: #4ecdc4;
+    --orb-glow: rgba(124, 106, 255, 0.45);
 
     --card: var(--surface);
     --card-foreground: var(--foreground);
@@ -89,52 +98,6 @@
 
     --primary: var(--accent-500);
     --primary-foreground: #ffffff;
-
-    --secondary: #f4f4f5;
-    --secondary-foreground: var(--foreground);
-
-    --muted: #f4f4f5;
-    --muted-foreground: var(--cream-muted);
-
-    --accent: #f4f4f5;
-    --accent-foreground: var(--foreground);
-
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-
-    --border: rgba(9, 9, 11, 0.10);
-    --input: rgba(9, 9, 11, 0.10);
-    --ring: var(--accent-500);
-
-    /* Slightly more visible dot pattern in light mode where the white
-       background washes out subtle textures. */
-    --dots-opacity: 0.06;
-
-    --sidebar: var(--surface);
-    --sidebar-foreground: var(--cream-muted);
-    --sidebar-border: var(--border);
-    --sidebar-accent: #f4f4f5;
-}
-
-.dark {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --surface: #111113;
-    --surface-elevated: #1a1a1d;
-    --cream: #fafafa;
-    --cream-muted: #a1a1aa;
-
-    --accent-400: #4ade80;
-    --accent-500: #22c55e;
-    --accent-600: #16a34a;
-
-    --card: var(--surface);
-    --card-foreground: var(--foreground);
-    --popover: var(--surface);
-    --popover-foreground: var(--foreground);
-
-    --primary: var(--accent-500);
-    --primary-foreground: #09090b;
 
     --secondary: var(--surface-elevated);
     --secondary-foreground: var(--foreground);
@@ -145,18 +108,141 @@
     --accent: var(--surface-elevated);
     --accent-foreground: var(--foreground);
 
-    --destructive: #f87171;
-    --destructive-foreground: #09090b;
+    --destructive: #ff4d6a;
+    --destructive-foreground: #ffffff;
 
-    --border: rgba(255, 255, 255, 0.06);
-    --input: rgba(255, 255, 255, 0.06);
+    --border: rgba(42, 42, 74, 0.5);
+    --input: rgba(42, 42, 74, 0.5);
     --ring: var(--accent-500);
     --dots-opacity: 0.04;
 
-    --sidebar: var(--surface);
+    --sidebar: #0d0d14;
     --sidebar-foreground: var(--cream-muted);
     --sidebar-border: var(--border);
     --sidebar-accent: var(--surface-elevated);
+}
+
+[data-palette="aurora"] {
+    --background: #0a0e1a;
+    --foreground: #f8fafc;
+    --surface: #111827;
+    --surface-elevated: #1a2332;
+    --cream: #f8fafc;
+    --cream-muted: #94a3b8;
+    --accent-400: #818cf8;
+    --accent-500: #38bdf8;
+    --accent-600: #0ea5e9;
+    --accent-gradient-start: #38bdf8;
+    --accent-gradient-end: #818cf8;
+    --recording-active: #f472b6;
+    --recording-idle: #38bdf8;
+    --waveform-primary: #38bdf8;
+    --waveform-secondary: #818cf8;
+    --orb-glow: rgba(56, 189, 248, 0.4);
+    --destructive: #f87171;
+    --border: rgba(51, 65, 85, 0.5);
+    --input: rgba(51, 65, 85, 0.5);
+    --sidebar: #0a0e1a;
+}
+
+[data-palette="ember"] {
+    --background: #120c0a;
+    --foreground: #fff5f0;
+    --surface: #1c1210;
+    --surface-elevated: #2a1a16;
+    --cream: #fff5f0;
+    --cream-muted: #b08878;
+    --accent-400: #ff2e63;
+    --accent-500: #ff6b35;
+    --accent-600: #e55a2b;
+    --accent-gradient-start: #ff6b35;
+    --accent-gradient-end: #ff2e63;
+    --recording-active: #ff2e63;
+    --recording-idle: #ff6b35;
+    --waveform-primary: #ff6b35;
+    --waveform-secondary: #ff2e63;
+    --orb-glow: rgba(255, 107, 53, 0.5);
+    --destructive: #ff2e63;
+    --border: rgba(58, 37, 32, 0.5);
+    --input: rgba(58, 37, 32, 0.5);
+    --sidebar: #120c0a;
+}
+
+[data-palette="ocean"] {
+    --background: #0a1628;
+    --foreground: #e8f4fd;
+    --surface: #0f1e36;
+    --surface-elevated: #162844;
+    --cream: #e8f4fd;
+    --cream-muted: #7eb8da;
+    --accent-400: #0099ff;
+    --accent-500: #00d4aa;
+    --accent-600: #00b894;
+    --accent-gradient-start: #00d4aa;
+    --accent-gradient-end: #0099ff;
+    --recording-active: #ff6b9d;
+    --recording-idle: #00d4aa;
+    --waveform-primary: #00d4aa;
+    --waveform-secondary: #0099ff;
+    --orb-glow: rgba(0, 212, 170, 0.4);
+    --destructive: #ff6b9d;
+    --border: rgba(30, 52, 85, 0.6);
+    --input: rgba(30, 52, 85, 0.6);
+    --sidebar: #0a1628;
+}
+
+[data-palette="snowfall"] {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --surface: #ffffff;
+    --surface-elevated: #f1f5f9;
+    --cream: #0f172a;
+    --cream-muted: #475569;
+    --accent-400: #8b5cf6;
+    --accent-500: #6366f1;
+    --accent-600: #4f46e5;
+    --accent-gradient-start: #6366f1;
+    --accent-gradient-end: #8b5cf6;
+    --recording-active: #ef4444;
+    --recording-idle: #6366f1;
+    --waveform-primary: #6366f1;
+    --waveform-secondary: #8b5cf6;
+    --orb-glow: rgba(99, 102, 241, 0.25);
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: rgba(226, 232, 240, 1);
+    --input: rgba(226, 232, 240, 1);
+    --primary-foreground: #ffffff;
+    --dots-opacity: 0.06;
+    --sidebar: #ffffff;
+}
+
+[data-palette="neonCity"] {
+    --background: #0d001a;
+    --foreground: #f0e6ff;
+    --surface: #150025;
+    --surface-elevated: #1f0035;
+    --cream: #f0e6ff;
+    --cream-muted: #9b72cf;
+    --accent-400: #00ffff;
+    --accent-500: #ff00ff;
+    --accent-600: #cc00cc;
+    --accent-gradient-start: #ff00ff;
+    --accent-gradient-end: #00ffff;
+    --recording-active: #ff0066;
+    --recording-idle: #ff00ff;
+    --waveform-primary: #ff00ff;
+    --waveform-secondary: #00ffff;
+    --orb-glow: rgba(255, 0, 255, 0.5);
+    --destructive: #ff0066;
+    --border: rgba(255, 0, 255, 0.15);
+    --input: rgba(255, 0, 255, 0.15);
+    --sidebar: #0d001a;
+}
+
+/* Legacy dark class — mirrors midnight when no palette set */
+.dark {
+    color-scheme: dark;
 }
 
 @layer base {
@@ -271,11 +357,11 @@
     .glass,
     .glass-strong,
     .glass-card {
-        background-color: var(--surface);
+        background-color: color-mix(in srgb, var(--surface) 85%, transparent);
         border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
+        border-radius: 1rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
 
     .glass-card {
@@ -284,19 +370,55 @@
     }
 
     .text-gradient,
-    .text-gradient-primary,
+    .text-gradient-primary {
+        background: linear-gradient(
+            90deg,
+            var(--accent-gradient-start, var(--accent-500)),
+            var(--accent-gradient-end, var(--accent-400))
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+    }
+
     .text-gradient-emerald {
         background: none;
         -webkit-text-fill-color: currentColor;
         color: inherit;
     }
 
-    /* "Serif headline" treatment becomes a solid accent-green pop */
     .headline-serif {
         font-family: var(--font-display);
         font-style: normal;
-        font-weight: 500;
-        color: var(--accent-500);
+        font-weight: 600;
+        color: var(--cream);
+    }
+
+    .accent-gradient-bg {
+        background: linear-gradient(
+            90deg,
+            var(--accent-gradient-start, var(--accent-500)),
+            var(--accent-gradient-end, var(--accent-400))
+        );
+    }
+
+    .recording-orb {
+        background: radial-gradient(
+            circle at 30% 30%,
+            var(--accent-gradient-start, var(--accent-500)),
+            var(--accent-gradient-end, var(--accent-400)) 55%,
+            color-mix(in srgb, var(--recording-active), transparent 30%) 100%
+        );
+        box-shadow:
+            0 0 40px var(--orb-glow, rgba(124, 106, 255, 0.4)),
+            0 0 80px color-mix(in srgb, var(--orb-glow, rgba(124, 106, 255, 0.4)), transparent 50%);
+    }
+
+    .recording-orb-active {
+        box-shadow:
+            0 0 50px var(--orb-glow, rgba(124, 106, 255, 0.5)),
+            0 0 100px color-mix(in srgb, var(--recording-active), transparent 40%);
     }
 
     .divider-gradient {
@@ -309,12 +431,28 @@
         background-size: 24px 24px;
     }
 
-    /* Animated decoration orbs - hidden site-wide */
+    /* Animated decoration orbs - theme-aware ambient glow */
     .orb,
     .orb-primary,
     .orb-secondary,
     .orb-accent {
-        display: none !important;
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        pointer-events: none;
+        opacity: 0.15;
+    }
+
+    .orb-primary {
+        background: var(--accent-gradient-start, var(--accent-500));
+        width: 320px;
+        height: 320px;
+    }
+
+    .orb-secondary {
+        background: var(--accent-gradient-end, var(--accent-400));
+        width: 240px;
+        height: 240px;
     }
 
     /* ───────── Badges ───────── */

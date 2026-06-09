@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VoiceFlow is a cross-platform voice-to-text paste utility built with Pyloid (Python desktop framework using PySide6/Qt WebEngine) and React. Users hold a hotkey to record audio, release to transcribe using faster-whisper, and the text is automatically pasted at the cursor. Supports Windows, Linux (Wayland/X11), and macOS.
+Dictore is a cross-platform voice-to-text paste utility built with Pyloid (Python desktop framework using PySide6/Qt WebEngine) and React. Users hold a hotkey to record audio, release to transcribe using faster-whisper, and the text is automatically pasted at the cursor. Supports Windows, Linux (Wayland/X11), and macOS.
 
 ## Commands
 
@@ -27,7 +27,7 @@ pnpm run build:installer:linux    # Linux (.tar.gz + .AppImage)
 pnpm run build:installer:macos    # macOS (.dmg)
 
 # Run Python tests
-cd VoiceFlow && uv run -p .venv pytest src-pyloid/tests/
+cd Dictore && uv run -p .venv pytest src-pyloid/tests/
 
 # Run single test file
 uv run -p .venv pytest src-pyloid/tests/test_transcription.py -v
@@ -55,9 +55,9 @@ Python backend using Pyloid framework with PySide6:
 - `hotkey.py` - Global hotkey listener using keyboard library
 - `clipboard.py` - Clipboard operations and paste-at-cursor using pyautogui
 - `settings.py` - Settings management with defaults
-- `database.py` - SQLite database for settings and history (stored at ~/.VoiceFlow/VoiceFlow.db)
+- `database.py` - SQLite database for settings and history (stored at ~/.Dictore/Dictore.db)
 - `logger.py` - Domain-based logging with hybrid format `[timestamp] [LEVEL] [domain] message | {json}`. Supports domains: model, audio, hotkey, settings, database, clipboard, window. Configured with 100MB log rotation.
-- `model_manager.py` - Whisper model download/cache management using huggingface_hub. Provides download progress tracking (percent, speed, ETA), cancellation via CancelToken, daemon thread execution, and `clear_cache()` to delete only VoiceFlow's faster-whisper models.
+- `model_manager.py` - Whisper model download/cache management using huggingface_hub. Provides download progress tracking (percent, speed, ETA), cancellation via CancelToken, daemon thread execution, and `clear_cache()` to delete only Dictore's faster-whisper models.
 
 ### Frontend (src/)
 

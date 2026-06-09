@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="media/logo-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="media/logo-light.png">
-    <img src="media/logo-dark.png" alt="VoiceFlow" width="320">
+    <img src="media/logo-dark.png" alt="Dictore" width="320">
   </picture>
 </h1>
 
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="media/dashboard.png" alt="VoiceFlow dashboard" width="100%">
+  <img src="media/dashboard.png" alt="Dictore dashboard" width="100%">
 </p>
 
 <p align="center">
@@ -21,14 +21,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/infiniV/VoiceFlow/releases/tag/v1.6.0"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
-  <a href="https://github.com/infiniV/VoiceFlow/releases/tag/v1.6.0"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
+  <a href="https://github.com/infiniV/Dictore/releases/tag/v1.6.0"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
+  <a href="https://github.com/infiniV/Dictore/releases/tag/v1.6.0"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
   <a href="https://get-voice-flow.vercel.app/"><img src="https://img.shields.io/badge/Website-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Website"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <sub>Latest: <a href="https://github.com/infiniV/VoiceFlow/releases/tag/v1.6.0"><code>v1.6.0</code></a> · <a href="https://github.com/infiniV/VoiceFlow/releases">all releases</a></sub>
+  <sub>Latest: <a href="https://github.com/infiniV/Dictore/releases/tag/v1.6.0"><code>v1.6.0</code></a> · <a href="https://github.com/infiniV/Dictore/releases">all releases</a></sub>
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@
 
 ## What it does
 
-VoiceFlow lives in your system tray. Hold a global hotkey, a small popup pops up with a live amplitude meter, you talk, you release, and the transcript is typed at the cursor. That's it.
+Dictore lives in your system tray. Hold a global hotkey, a small popup pops up with a live amplitude meter, you talk, you release, and the transcript is typed at the cursor. That's it.
 
 The inference runs on your machine through [faster-whisper](https://github.com/SYSTRAN/faster-whisper). CUDA when you have it, CPU when you don't. The audio never touches a network socket.
 
@@ -57,7 +57,7 @@ Long-form recording that captures your mic plus system audio (Zoom, Meet, anythi
 - **Bring your own LLM.** OpenAI, Groq, OpenRouter, Ollama, or any OpenAI-compatible endpoint. Keys live in your OS keychain.
 - **Auto-rename** from a default timestamp to a real topic once the transcript lands.
 - **Export** to Markdown, plain text, SRT, or structured JSON.
-- **Built-in playback** via the `voiceflow://` URL scheme — jump straight from any transcript line into the audio.
+- **Built-in playback** via the `dictore://` URL scheme — jump straight from any transcript line into the audio.
 
 Recording, transcription, search, and storage stay local. The only network call is the optional summary request — skip it, point it at a local Ollama, or send it to a provider you already pay for.
 
@@ -69,12 +69,12 @@ Recording, transcription, search, and storage stay local. The only network call 
 - **Hold or Toggle modes.** Configurable hotkeys including modifier-only combos like `Ctrl+Win`.
 - **Wayland and X11.** Native `evdev` input on Linux, Hyprland window rules, `wl-copy` and `wtype`/`ydotool` for paste.
 - **99+ languages.** Whisper handles language detection automatically.
-- **Searchable history.** SQLite log of every transcript, stored at `~/.VoiceFlow/`.
+- **Searchable history.** SQLite log of every transcript, stored at `~/.Dictore/`.
 - **Dark mode by default.** Light and system themes if you want them.
 
-## VoiceFlow vs cloud dictation
+## Dictore vs cloud dictation
 
-|  | VoiceFlow | Cloud services |
+|  | Dictore | Cloud services |
 | :--- | :--- | :--- |
 | Cost | $0 | ~$10–15/month |
 | Where audio goes | Your RAM | Their servers |
@@ -84,7 +84,7 @@ Recording, transcription, search, and storage stay local. The only network call 
 
 ## Install
 
-Grab the latest binary from [Releases](https://github.com/infiniV/VoiceFlow/releases) — currently [`v1.6.0`](https://github.com/infiniV/VoiceFlow/releases/tag/v1.6.0):
+Grab the latest binary from [Releases](https://github.com/infiniV/Dictore/releases) — currently [`v1.6.0`](https://github.com/infiniV/Dictore/releases/tag/v1.6.0):
 
 - **Windows 10/11**: `.exe` installer (Inno Setup)
 - **Linux**: `.AppImage` or `.tar.gz`
@@ -94,8 +94,8 @@ Grab the latest binary from [Releases](https://github.com/infiniV/VoiceFlow/rele
 ## Build from source
 
 ```bash
-git clone https://github.com/infiniV/VoiceFlow.git
-cd VoiceFlow
+git clone https://github.com/infiniV/Dictore.git
+cd Dictore
 pnpm run setup        # installs Node and Python deps
 pnpm run dev          # Vite frontend + Pyloid backend
 ```
@@ -115,10 +115,10 @@ pnpm run build:installer:macos    # macOS (.dmg, unsupported)
 | Shell | [Pyloid](https://github.com/pyloid/pyloid) (PySide6 + Qt WebEngine) |
 | Inference | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (CTranslate2) |
 | Frontend | React 18, Vite, Tailwind v4, shadcn/ui |
-| Storage | SQLite at `~/.VoiceFlow/VoiceFlow.db` |
+| Storage | SQLite at `~/.Dictore/Dictore.db` |
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
 
-[Releases](https://github.com/infiniV/VoiceFlow/releases) · [Issues](https://github.com/infiniV/VoiceFlow/issues) · [Website](https://get-voice-flow.vercel.app/)
+[Releases](https://github.com/infiniV/Dictore/releases) · [Issues](https://github.com/infiniV/Dictore/issues) · [Website](https://get-voice-flow.vercel.app/)

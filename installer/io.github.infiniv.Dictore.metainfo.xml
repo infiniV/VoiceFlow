@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.infiniv.VoiceFlow</id>
+  <id>io.github.infiniv.Dictore</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>VoiceFlow</name>
+  <name>Dictore</name>
   <summary>Offline voice dictation for Linux and Windows, using Whisper</summary>
   <description>
-    <p>VoiceFlow is an open-source voice-to-text dictation app for Linux and Windows. Hold a global hotkey to record, release and the transcript is pasted at the cursor. It uses OpenAI Whisper through faster-whisper, running on your own machine. Free, no account needed.</p>
+    <p>Dictore is an open-source voice-to-text dictation app for Linux and Windows. Hold a global hotkey to record, release and the transcript is pasted at the cursor. It uses OpenAI Whisper through faster-whisper, running on your own machine. Free, no account needed.</p>
     <p>Features:</p>
     <ul>
       <li>Push-to-talk global hotkey, including modifier-only combos</li>
@@ -17,10 +17,10 @@
       <li>CUDA GPU acceleration with automatic CPU fallback</li>
     </ul>
   </description>
-  <launchable type="desktop-id">VoiceFlow.desktop</launchable>
+  <launchable type="desktop-id">Dictore.desktop</launchable>
   <url type="homepage">https://get-voice-flow.vercel.app/</url>
-  <url type="bugtracker">https://github.com/infiniV/VoiceFlow/issues</url>
-  <url type="vcs-browser">https://github.com/infiniV/VoiceFlow</url>
+  <url type="bugtracker">https://github.com/infiniV/Dictore/issues</url>
+  <url type="vcs-browser">https://github.com/infiniV/Dictore</url>
   <developer_name>infiniV</developer_name>
   <categories>
     <category>Utility</category>

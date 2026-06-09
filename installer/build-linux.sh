@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION=$(node -p "require('$PROJECT_ROOT/package.json').version")
-APP_NAME="VoiceFlow"
+APP_NAME="Dictore"
 DIST_DIR="$PROJECT_ROOT/dist"
 PYINSTALLER_OUT="$DIST_DIR/$APP_NAME"
 OUTPUT_DIR="$DIST_DIR/installer"
@@ -82,11 +82,11 @@ cp -a "$PYINSTALLER_OUT/." "$APPDIR/"
 # Copy AppRun and .desktop
 cp "$SCRIPT_DIR/AppRun" "$APPDIR/AppRun"
 chmod +x "$APPDIR/AppRun"
-cp "$SCRIPT_DIR/VoiceFlow.desktop" "$APPDIR/VoiceFlow.desktop"
+cp "$SCRIPT_DIR/Dictore.desktop" "$APPDIR/Dictore.desktop"
 
 # Copy icon (AppImage needs it at root and in hicolor)
-cp "$PROJECT_ROOT/src-pyloid/icons/icon.png" "$APPDIR/voiceflow.png"
-cp "$PROJECT_ROOT/src-pyloid/icons/icon.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/voiceflow.png"
+cp "$PROJECT_ROOT/src-pyloid/icons/icon.png" "$APPDIR/dictore.png"
+cp "$PROJECT_ROOT/src-pyloid/icons/icon.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/dictore.png"
 
 # Ensure main binary is executable
 chmod +x "$APPDIR/$APP_NAME"

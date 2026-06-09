@@ -2,7 +2,7 @@
 
 The Whisper model is mocked so these tests are fast and deterministic. A real
 transcription test would belong in a slow integration suite gated by
-`VOICEFLOW_BIG_MODEL_TESTS=1`.
+`DICTORE_BIG_MODEL_TESTS=1`.
 """
 
 from __future__ import annotations

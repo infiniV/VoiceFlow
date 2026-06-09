@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION=$(node -p "require('$PROJECT_ROOT/package.json').version")
-APP_NAME="VoiceFlow"
+APP_NAME="Dictore"
 DIST_DIR="$PROJECT_ROOT/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 OUTPUT_DIR="$DIST_DIR/installer"

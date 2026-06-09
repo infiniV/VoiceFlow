@@ -8,11 +8,16 @@ import {
   Hand,
   ToggleRight,
   HardDrive,
-  Sun,
-  Moon,
-  Monitor,
   ExternalLink,
+  Moon,
+  Sparkles,
+  Flame,
+  Waves,
+  Snowflake,
+  Building2,
 } from "lucide-react";
+import { applyThemePalette, getPaletteMeta, THEME_PALETTES } from "@/lib/themes";
+import { REWRITE_PRESET_OPTIONS } from "@/lib/constants";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -71,9 +76,12 @@ const FALLBACK_META: ModelMeta = {
 };
 
 const THEME_ICONS: Record<string, React.ElementType> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
+  midnight: Moon,
+  aurora: Sparkles,
+  ember: Flame,
+  ocean: Waves,
+  snowfall: Snowflake,
+  neonCity: Building2,
 };
 
 const SECTIONS = [
@@ -286,12 +294,7 @@ export function SettingsTab() {
 
   useEffect(() => {
     if (!settings) return;
-    const root = document.documentElement;
-    const isDark =
-      settings.theme === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        : settings.theme === "dark";
-    root.classList.toggle("dark", isDark);
+    applyThemePalette(settings.theme);
   }, [settings?.theme]);
 
   if (loading) return <LoadingState />;
@@ -304,14 +307,14 @@ export function SettingsTab() {
       <div className="w-full max-w-4xl mx-auto px-6 md:px-10 py-10 md:py-16 space-y-16">
         <header className="space-y-4">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-cream-muted/60">
-            ~/voiceflow/preferences
+            ~/dictore/preferences
           </p>
           <h1 className="font-display text-4xl md:text-5xl font-medium tracking-tight text-cream leading-[1.05]">
             Settings
           </h1>
           <p className="text-sm text-cream-muted max-w-xl leading-relaxed">
             Local-first by design. Every preference here lives on your machine in{" "}
-            <span className="font-mono text-cream">~/.VoiceFlow/</span>. Changes
+            <span className="font-mono text-cream">~/.Dictore/</span>. Changes
             save as you go.
           </p>
           <SectionIndex />
@@ -383,7 +386,7 @@ export function SettingsTab() {
           id="behavior"
           index="02"
           title="Behavior"
-          description="How VoiceFlow reacts when you speak — hotkeys, indicators, and small touches."
+          description="How Dictore reacts when you speak — hotkeys, indicators, and small touches."
         >
           <SectionBlock
             label="Hotkeys"
@@ -396,6 +399,28 @@ export function SettingsTab() {
             />
           </SectionBlock>
 
+          <ToggleRow
+            label="Auto-rewrite"
+            helper="Polish transcribed text with a preset before pasting — same presets as VoiceKey on iOS."
+            checked={settings.autoRewriteEnabled ?? true}
+            onChange={(v) => updateSetting("autoRewriteEnabled", v)}
+          />
+          <SettingRow label="Rewrite preset" helper="How dictated text is cleaned up before paste.">
+            <SelectField
+              value={settings.rewritePreset ?? "grammar_correct"}
+              onChange={(v) => updateSetting("rewritePreset", v as Settings["rewritePreset"])}
+              options={REWRITE_PRESET_OPTIONS.map((p) => ({
+                value: p.val,
+                label: p.label,
+              }))}
+            />
+          </SettingRow>
+          <ToggleRow
+            label="Remove filler words"
+            helper="Strips um, uh, like, and other verbal tics from transcriptions."
+            checked={settings.fillerRemovalEnabled ?? true}
+            onChange={(v) => updateSetting("fillerRemovalEnabled", v)}
+          />
           <ToggleRow
             label="Floating recording indicator"
             helper="Shows a small pill at the bottom of your screen while recording. Hide it for a quieter experience — recording still works."
@@ -416,7 +441,7 @@ export function SettingsTab() {
           />
           <ToggleRow
             label="Launch at login"
-            helper="Start VoiceFlow when you sign in to your computer."
+            helper="Start Dictore when you sign in to your computer."
             checked={settings.autoStart}
             onChange={(v) => updateSetting("autoStart", v)}
           />
@@ -444,11 +469,10 @@ export function SettingsTab() {
           id="appearance"
           index="05"
           title="Appearance"
-          description="Light, dark, or follow your operating system."
+          description="Six color palettes from VoiceKey — Midnight is the default."
         >
           <ThemePicker
             value={settings.theme}
-            options={options.themeOptions}
             onChange={(v) => updateSetting("theme", v as Settings["theme"])}
           />
         </Section>
@@ -472,7 +496,7 @@ export function SettingsTab() {
             />
           </SectionBlock>
 
-          <SectionBlock label="Storage paths" helper="Files VoiceFlow keeps on disk.">
+          <SectionBlock label="Storage paths" helper="Files Dictore keeps on disk.">
             <StoragePaths modelCacheDir={modelCacheDir} />
           </SectionBlock>
         </Section>
@@ -488,7 +512,7 @@ export function SettingsTab() {
         </Section>
 
         <footer className="pt-8 border-t border-border flex items-center justify-between font-mono text-[11px] text-cream-muted/60">
-          <span>VoiceFlow · local · open-source</span>
+          <span>Dictore · local · open-source</span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-500" />
             preferences saved
@@ -1120,46 +1144,48 @@ function HotkeyMode({
 
 function ThemePicker({
   value,
-  options,
   onChange,
 }: {
   value: string;
-  options: string[];
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-3 max-w-md">
-      {options.map((theme) => {
-        const Icon = THEME_ICONS[theme] ?? Sun;
-        const isActive = value === theme;
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl">
+      {THEME_PALETTES.map((palette) => {
+        const Icon = THEME_ICONS[palette.id] ?? Moon;
+        const isActive = value === palette.id || getPaletteMeta(value).id === palette.id;
         return (
           <button
-            key={theme}
+            key={palette.id}
             type="button"
-            onClick={() => onChange(theme)}
+            onClick={() => onChange(palette.id)}
             aria-pressed={isActive}
             className={cn(
-              "relative flex flex-col items-center gap-2 rounded-md border p-4 transition-colors",
+              "relative flex flex-col items-start gap-3 rounded-xl border p-4 transition-all text-left",
               isActive
-                ? "border-accent-500/40 bg-accent-500/5 text-cream"
-                : "border-border bg-secondary/30 text-cream-muted hover:bg-secondary/60 hover:text-cream"
+                ? "border-accent-500/50 bg-accent-500/5 ring-1 ring-accent-500/30"
+                : "border-border bg-secondary/20 hover:bg-secondary/40"
             )}
           >
-            <Icon
-              className={cn(
-                "w-5 h-5",
-                isActive ? "text-accent-500" : "text-cream-muted/70"
-              )}
-              strokeWidth={2}
+            <div
+              className="w-full h-10 rounded-lg"
+              style={{
+                background: `linear-gradient(135deg, ${palette.accent}, ${palette.accentEnd})`,
+              }}
+              aria-hidden
             />
-            <span className="font-mono text-[11px] uppercase tracking-widest">
-              {theme}
-            </span>
-            {isActive && (
-              <span
-                className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-accent-500"
-                aria-hidden
+            <div className="flex items-center gap-2 w-full">
+              <Icon
+                className={cn(
+                  "w-4 h-4",
+                  isActive ? "text-accent-500" : "text-cream-muted/70"
+                )}
+                strokeWidth={2}
               />
+              <span className="text-sm font-medium text-cream">{palette.name}</span>
+            </div>
+            {isActive && (
+              <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-accent-500" aria-hidden />
             )}
           </button>
         );
@@ -1208,7 +1234,7 @@ function StoragePaths({ modelCacheDir }: { modelCacheDir: string | null }) {
       <PathRow
         label="App data"
         description="History, settings, audio recordings"
-        path="~/.VoiceFlow/"
+        path="~/.Dictore/"
         onOpen={() => api.openDataFolder()}
       />
       <PathRow
@@ -1317,7 +1343,7 @@ function DangerZone({ onModelsCleared }: { onModelsCleared: () => void }) {
         <div className="flex-1">
           <p className="text-sm font-medium text-cream">Reset all data</p>
           <p className="text-xs text-cream-muted mt-1 leading-relaxed max-w-xl">
-            Choose what to delete. After confirming, VoiceFlow returns to
+            Choose what to delete. After confirming, Dictore returns to
             onboarding so you can set things up fresh.
           </p>
         </div>

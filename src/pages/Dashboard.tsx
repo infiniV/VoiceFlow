@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { HomePage } from "@/components/HomePage";
 import { HistoryPage } from "@/components/HistoryPage";
 import { SettingsTab } from "@/components/SettingsTab";
@@ -42,12 +43,12 @@ export function Dashboard() {
         </Button>
         <img
           src="/light-logo.png"
-          alt="VoiceFlow"
+          alt="Dictore"
           className="h-7 w-auto block dark:hidden"
         />
         <img
           src="/dark-logo.png"
-          alt="VoiceFlow"
+          alt="Dictore"
           className="h-7 w-auto hidden dark:block"
         />
       </header>
@@ -60,7 +61,7 @@ export function Dashboard() {
         >
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <SheetDescription className="sr-only">
-            Move between sections of VoiceFlow — Home, History, Meetings, and Settings.
+            Move between sections of Dictore — Record, Meetings, History, and Settings.
           </SheetDescription>
           <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
         </SheetContent>
@@ -69,7 +70,7 @@ export function Dashboard() {
       {/* Banner sits in the right column above main so the hotkey warning stays pinned and doesn't scroll with content */}
       <div className="flex-1 flex flex-col min-w-0 pt-14 md:pt-0">
         <HotkeyStatusBanner />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-16 md:pb-0">
           <Routes>
             <Route index element={<HomePage />} />
             <Route path="history" element={<HistoryPage />} />
@@ -80,6 +81,7 @@ export function Dashboard() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
+        <BottomTabBar />
       </div>
     </div>
     </MeetingRecorderProvider>

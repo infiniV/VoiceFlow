@@ -1,6 +1,6 @@
 """Subprocess env sanitization for PyInstaller / AppImage builds.
 
-When VoiceFlow is run from a PyInstaller bundle (or AppImage), the bootloader
+When Dictore is run from a PyInstaller bundle (or AppImage), the bootloader
 prepends `_internal/` to `LD_LIBRARY_PATH`. Any subprocess we spawn inherits
 that env, which makes system binaries (xdg-open -> chromium, etc.) load our
 bundled libs (libharfbuzz, libstdc++, …) instead of the system ones — usually

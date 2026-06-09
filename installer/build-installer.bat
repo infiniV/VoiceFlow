@@ -1,5 +1,5 @@
 @echo off
-REM VoiceFlow Installer Build Script
+REM Dictore Installer Build Script
 REM Requires: Inno Setup 6 installed (https://jrsoftware.org/isdl.php)
 
 setlocal
@@ -19,8 +19,8 @@ if "%ISCC%"=="" (
 )
 
 REM Check if build output exists
-if not exist "..\dist\VoiceFlow" (
-    echo Error: PyInstaller output not found at ..\dist\VoiceFlow
+if not exist "..\dist\Dictore" (
+    echo Error: PyInstaller output not found at ..\dist\Dictore
     echo Please run 'pnpm run build' first.
     exit /b 1
 )
@@ -29,8 +29,8 @@ REM Create output directory
 if not exist "..\dist\installer" mkdir "..\dist\installer"
 
 REM Build installer
-echo Building VoiceFlow installer...
-"%ISCC%" voiceflow.iss
+echo Building Dictore installer...
+"%ISCC%" dictore.iss
 
 if %ERRORLEVEL% EQU 0 (
     echo.

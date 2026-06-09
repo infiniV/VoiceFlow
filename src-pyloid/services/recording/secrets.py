@@ -2,7 +2,7 @@
 
 Primary path: OS keychain via the `keyring` package (Windows Credential Manager,
 macOS Keychain, Linux Secret Service). Fallback when no backend is available:
-JSON file at ~/.VoiceFlow/secrets.json with mode 0600.
+JSON file at ~/.Dictore/secrets.json with mode 0600.
 
 The secret never appears in settings rows, in logs, or in RPC responses — RPCs
 expose a `has_api_key` boolean instead.
@@ -22,9 +22,9 @@ except Exception:  # pragma: no cover - exercised in tests via monkeypatch
     _keyring = None  # type: ignore[assignment]
 
 
-_SERVICE_NAME = "VoiceFlow"
+_SERVICE_NAME = "Dictore"
 _USERNAME_PREFIX = "llm:"
-_FALLBACK_PATH: Path = Path.home() / ".VoiceFlow" / "secrets.json"
+_FALLBACK_PATH: Path = Path.home() / ".Dictore" / "secrets.json"
 
 
 def _username(preset_or_endpoint: str) -> str:

@@ -1,6 +1,6 @@
 """Tests for slice 6 — crash-recovery sweep on startup (Q5).
 
-If VoiceFlow exits uncleanly mid-recording the WAV file is on disk but the DB
+If Dictore exits uncleanly mid-recording the WAV file is on disk but the DB
 row is left in `recorder_state ∈ {recording, paused}`. On the next launch we
 sweep those rows, fix the WAV header via soundfile, mark them stopped, and
 enqueue transcription so the user doesn't silently lose hours of audio.

@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, History, Radio, Settings, Github, Heart, MessageSquare } from "lucide-react";
+import { History, Radio, Settings, Github, Heart, MessageSquare, Mic, Brain, PenLine, Link2 } from "lucide-react";
 import { cn, formatHotkeyForDisplay } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { APP_VERSION } from "@/lib/constants";
 
-const GITHUB_REPO_URL = "https://github.com/infiniV/VoiceFlow";
+const GITHUB_REPO_URL = "https://github.com/infiniV/Dictore";
 const FALLBACK_HOTKEY = "ctrl+win";
 
-const navItems = [
-  { to: "/dashboard", icon: Home, label: "Home" },
-  { to: "/dashboard/history", icon: History, label: "History" },
+const navItems: Array<{
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  disabled?: boolean;
+}> = [
+  { to: "/dashboard", icon: Mic, label: "Record" },
   { to: "/dashboard/meetings", icon: Radio, label: "Meetings" },
+  { to: "/dashboard/history", icon: History, label: "History" },
+  { to: "/dashboard/insights", icon: Brain, label: "Insights", disabled: true },
+  { to: "/dashboard/create", icon: PenLine, label: "Create", disabled: true },
+  { to: "/dashboard/links", icon: Link2, label: "Links", disabled: true },
   { to: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -49,12 +57,12 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       <div className="p-6 pb-8">
         <img
           src="/light-logo.png"
-          alt="VoiceFlow"
+          alt="Dictore"
           className="h-7 w-auto block dark:hidden"
         />
         <img
           src="/dark-logo.png"
-          alt="VoiceFlow"
+          alt="Dictore"
           className="h-7 w-auto hidden dark:block"
         />
         <p className="text-xs text-cream-muted mt-2 font-mono">
@@ -67,7 +75,18 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <p className="font-mono text-[10px] text-cream-muted/60 uppercase tracking-[0.2em] px-3 mb-2">
           navigate
         </p>
-        {navItems.map((item) => (
+        {navItems.map((item) =>
+          item.disabled ? (
+            <div
+              key={item.to}
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-cream-muted/40 cursor-not-allowed"
+              title="Coming soon"
+            >
+              <item.icon className="h-4 w-4 text-cream-muted/30" strokeWidth={2} />
+              <span className="flex-1">{item.label}</span>
+              <span className="text-[9px] font-mono uppercase tracking-wider opacity-60">soon</span>
+            </div>
+          ) : (
           <NavLink
             key={item.to}
             to={item.to}
@@ -92,10 +111,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                   strokeWidth={2}
                 />
                 <span className="flex-1">{item.label}</span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-accent-500" aria-hidden />
+                )}
               </>
             )}
           </NavLink>
-        ))}
+          )
+        )}
       </nav>
 
       {/* Footer */}

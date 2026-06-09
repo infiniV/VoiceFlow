@@ -30,8 +30,17 @@ RETENTION_OPTIONS = {
     "Forever": -1,
 }
 
-# Theme options
-THEME_OPTIONS = ["system", "light", "dark"]
+# Theme palettes — aligned with VoiceKey (SimpleVoiceKeyboard iOS)
+THEME_OPTIONS = ["midnight", "aurora", "ember", "ocean", "snowfall", "neonCity"]
+LEGACY_THEME_MAP = {"dark": "midnight", "light": "snowfall", "system": "midnight"}
+
+# Rewrite presets — aligned with iOS RewritePreset
+REWRITE_PRESET_OPTIONS = ["grammar_correct", "professional", "casual_spoken", "concise"]
+
+
+def normalize_theme(theme: str) -> str:
+    mapped = LEGACY_THEME_MAP.get(theme, theme)
+    return mapped if mapped in THEME_OPTIONS else "midnight"
 
 # Device options for transcription
 DEVICE_OPTIONS = ["auto", "cpu", "cuda"]
@@ -59,7 +68,10 @@ class Settings:
     device: str = "auto"  # "auto", "cpu", or "cuda"
     auto_start: bool = True
     retention: int = -1  # days, -1 = forever
-    theme: str = "dark"
+    theme: str = "midnight"
+    auto_rewrite_enabled: bool = True
+    rewrite_preset: str = "grammar_correct"
+    filler_removal_enabled: bool = True
     onboarding_complete: bool = False
     microphone: int = -1  # -1 = default device, otherwise device id
     save_audio_to_history: bool = False
@@ -100,7 +112,10 @@ class SettingsService:
             device=self.db.get_setting("device", "auto"),
             auto_start=self.db.get_setting("auto_start", "true") == "true",
             retention=int(self.db.get_setting("retention", "-1")),
-            theme=self.db.get_setting("theme", "dark"),
+            theme=normalize_theme(self.db.get_setting("theme", "midnight")),
+            auto_rewrite_enabled=self.db.get_setting("auto_rewrite_enabled", "true") == "true",
+            rewrite_preset=self.db.get_setting("rewrite_preset", "grammar_correct"),
+            filler_removal_enabled=self.db.get_setting("filler_removal_enabled", "true") == "true",
             onboarding_complete=self.db.get_setting("onboarding_complete", "false") == "true",
             microphone=int(self.db.get_setting("microphone", "-1")),
             save_audio_to_history=self.db.get_setting("save_audio_to_history", "false") == "true",
@@ -137,6 +152,9 @@ class SettingsService:
         auto_start: Optional[bool] = None,
         retention: Optional[int] = None,
         theme: Optional[str] = None,
+        auto_rewrite_enabled: Optional[bool] = None,
+        rewrite_preset: Optional[str] = None,
+        filler_removal_enabled: Optional[bool] = None,
         onboarding_complete: Optional[bool] = None,
         microphone: Optional[int] = None,
         save_audio_to_history: Optional[bool] = None,
@@ -169,7 +187,13 @@ class SettingsService:
         if retention is not None:
             self.db.set_setting("retention", str(retention))
         if theme is not None:
-            self.db.set_setting("theme", theme)
+            self.db.set_setting("theme", normalize_theme(theme))
+        if auto_rewrite_enabled is not None:
+            self.db.set_setting("auto_rewrite_enabled", "true" if auto_rewrite_enabled else "false")
+        if rewrite_preset is not None:
+            self.db.set_setting("rewrite_preset", rewrite_preset)
+        if filler_removal_enabled is not None:
+            self.db.set_setting("filler_removal_enabled", "true" if filler_removal_enabled else "false")
         if onboarding_complete is not None:
             self.db.set_setting("onboarding_complete", "true" if onboarding_complete else "false")
         if microphone is not None:

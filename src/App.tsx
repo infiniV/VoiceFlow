@@ -8,6 +8,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { ModelRecoveryModal } from "@/components/ModelRecoveryModal";
 import type { Settings } from "@/lib/types";
 
+import { applyThemePalette } from "@/lib/themes";
+
 // Detect Linux platform and add reduced-effects class
 // Qt WebEngine on Linux often falls back to software rendering,
 // making backdrop-filter/blur extremely expensive
@@ -18,22 +20,9 @@ if (isLinux && window.location.hash !== "#/popup") {
   document.documentElement.classList.add("reduced-effects");
 }
 
-// Apply theme to document
+// Apply theme palette to document (VoiceKey / iOS parity)
 function applyTheme(theme: Settings["theme"]) {
-  const root = document.documentElement;
-  let isDark = false;
-
-  if (theme === "system") {
-    isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  } else {
-    isDark = theme === "dark";
-  }
-
-  if (isDark) {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
+  applyThemePalette(theme);
 }
 
 function AppRouter() {

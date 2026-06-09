@@ -1,5 +1,5 @@
 [project]
-name = "VoiceFlow"
+name = "Dictore"
 version = "1.6.1"
 readme = "README.md"
 description = "Offline voice-to-text dictation for Windows and Linux, using Whisper."
@@ -35,9 +35,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://get-voice-flow.vercel.app/"
-Repository = "https://github.com/infiniV/VoiceFlow"
-Issues = "https://github.com/infiniV/VoiceFlow/issues"
-Releases = "https://github.com/infiniV/VoiceFlow/releases"
+Repository = "https://github.com/infiniV/Dictore"
+Issues = "https://github.com/infiniV/Dictore/issues"
+Releases = "https://github.com/infiniV/Dictore/releases"
 
 [dependency-groups]
 dev = [
@@ -50,6 +50,6 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["src-pyloid/tests"]
 markers = [
-    "network: tests that hit huggingface.co (slow, opt-in via VOICEFLOW_NETWORK_TESTS=1)",
-    "big_model: tests that download multi-GB models (opt-in via VOICEFLOW_BIG_MODEL_TESTS=1)",
+    "network: tests that hit huggingface.co (slow, opt-in via DICTORE_NETWORK_TESTS=1)",
+    "big_model: tests that download multi-GB models (opt-in via DICTORE_BIG_MODEL_TESTS=1)",
 ]

@@ -1,5 +1,5 @@
 #!/bin/bash
-# AppImage entry point for VoiceFlow
+# AppImage entry point for Dictore
 HERE="$(dirname "$(readlink -f "$0")")"
 
 # On Wayland sessions, prefer native Wayland with XCB fallback.
@@ -10,4 +10,4 @@ if [ -z "$QT_QPA_PLATFORM" ] && [ "$XDG_SESSION_TYPE" = "wayland" ]; then
     export QT_QPA_PLATFORM="wayland;xcb"
 fi
 
-exec "$HERE/VoiceFlow" "$@"
+exec "$HERE/Dictore" "$@"

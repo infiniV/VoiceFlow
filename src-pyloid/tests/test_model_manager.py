@@ -296,8 +296,8 @@ class TestProgressCallback:
 # These hit huggingface.co. They are gated behind env vars so the default
 # `pytest` invocation stays fast.
 #
-# - VOICEFLOW_NETWORK_TESTS=1   -> run tiny + base downloads (under ~150MB)
-# - VOICEFLOW_BIG_MODEL_TESTS=1 -> also run small + turbo downloads (multi-GB)
+# - DICTORE_NETWORK_TESTS=1   -> run tiny + base downloads (under ~150MB)
+# - DICTORE_BIG_MODEL_TESTS=1 -> also run small + turbo downloads (multi-GB)
 #
 # Why these exist: huggingface_hub's tqdm_class contract is fragile. In 1.x
 # the bytes_progress bar is created with disable=is_tqdm_disabled(...) which
@@ -312,8 +312,8 @@ import shutil
 from pathlib import Path
 
 
-NETWORK_TESTS_ENABLED = os.getenv("VOICEFLOW_NETWORK_TESTS") == "1"
-BIG_MODEL_TESTS_ENABLED = os.getenv("VOICEFLOW_BIG_MODEL_TESTS") == "1"
+NETWORK_TESTS_ENABLED = os.getenv("DICTORE_NETWORK_TESTS") == "1"
+BIG_MODEL_TESTS_ENABLED = os.getenv("DICTORE_BIG_MODEL_TESTS") == "1"
 
 
 def _hf_cache_path_for(repo_id: str) -> Path:
@@ -331,7 +331,7 @@ def _purge_cached(model_name: str):
 @pytest.mark.network
 @pytest.mark.skipif(
     not NETWORK_TESTS_ENABLED,
-    reason="Real-network tests disabled (set VOICEFLOW_NETWORK_TESTS=1 to run)",
+    reason="Real-network tests disabled (set DICTORE_NETWORK_TESTS=1 to run)",
 )
 class TestRealDownload:
     """Real network downloads. Verify the actual contract with huggingface_hub."""
@@ -422,7 +422,7 @@ class TestRealDownload:
 @pytest.mark.big_model
 @pytest.mark.skipif(
     not BIG_MODEL_TESTS_ENABLED,
-    reason="Big-model tests disabled (set VOICEFLOW_BIG_MODEL_TESTS=1 to run)",
+    reason="Big-model tests disabled (set DICTORE_BIG_MODEL_TESTS=1 to run)",
 )
 class TestBigModelDownload:
     """Multi-GB model downloads. Run manually before releases."""

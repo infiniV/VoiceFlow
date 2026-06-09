@@ -1,5 +1,5 @@
 """
-GPU detection and management for VoiceFlow.
+GPU detection and management for Dictore.
 
 Uses ctranslate2's built-in functions to detect CUDA availability
 without requiring torch dependency.
@@ -97,7 +97,7 @@ def _get_local_cuda_dir() -> Path:
         base = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
     else:
         base = Path.home()
-    return base / ".VoiceFlow" / "cuda"
+    return base / ".Dictore" / "cuda"
 
 
 def _add_local_cudnn_to_path():

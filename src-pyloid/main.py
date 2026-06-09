@@ -91,20 +91,20 @@ if sys.platform.startswith('linux'):
     os.environ.setdefault('QTWEBENGINE_ENABLE_LINUX_ACCESSIBILITY', '0')
 
 # ----------------------------------------------------------------------------
-# Register the voiceflow:// custom URL scheme BEFORE QApplication is created.
+# Register the dictore:// custom URL scheme BEFORE QApplication is created.
 # QWebEngineUrlScheme.registerScheme() is a no-op once QApplication exists.
 # Pyloid's __init__ instantiates QApplication, so this MUST run before the
 # `from pyloid import Pyloid` import below (its module init does NOT construct
 # QApplication; only Pyloid(...) does).
 #
 # The HTML5 <audio> element on MeetingDetailPage builds URLs of the form
-# `voiceflow://recording/<filename>.wav`. The matching handler subclass is
+# `dictore://recording/<filename>.wav`. The matching handler subclass is
 # in services.recording.audio_scheme_handler and is installed on the default
 # QWebEngineProfile after Pyloid() returns.
 # ----------------------------------------------------------------------------
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme
 
-_vf_scheme = QWebEngineUrlScheme(b"voiceflow")
+_vf_scheme = QWebEngineUrlScheme(b"dictore")
 _vf_scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
 # PortUnspecified is the default for newly-constructed schemes; PySide6's
 # setDefaultPort wants a raw int (-1) rather than the SpecialPort enum, so
@@ -141,7 +141,7 @@ from pyloid import Pyloid
 # The `--disable-background-timer-throttling --disable-renderer-backgrounding
 # --disable-features=CalculateNativeWinOcclusion` flags are essential for the
 # Meetings recorder: without them, Chromium throttles setInterval to ~once per
-# minute when the VoiceFlow window loses focus, freezing the timer and level
+# minute when the Dictore window loses focus, freezing the timer and level
 # meters even though the backend keeps recording. Same flags Discord, Slack, and
 # VS Code use for the same reason.
 #
@@ -215,7 +215,7 @@ def init_signals():
 _instance_mutex = None
 
 def ensure_single_instance():
-    """Ensure only one instance of VoiceFlow runs at a time using Windows mutex."""
+    """Ensure only one instance of Dictore runs at a time using Windows mutex."""
     global _instance_mutex
 
     if sys.platform != 'win32':
@@ -230,22 +230,22 @@ def ensure_single_instance():
 
         # Create a named mutex
         kernel32 = ctypes.windll.kernel32
-        mutex_name = "VoiceFlow_SingleInstance_Mutex"
+        mutex_name = "Dictore_SingleInstance_Mutex"
 
         _instance_mutex = kernel32.CreateMutexW(None, False, mutex_name)
 
         if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-            log.warning("Another instance of VoiceFlow is already running")
+            log.warning("Another instance of Dictore is already running")
             # Try to focus the existing instance by finding its window
             try:
                 user32 = ctypes.windll.user32
-                hwnd = user32.FindWindowW(None, "VoiceFlow")
+                hwnd = user32.FindWindowW(None, "Dictore")
                 if hwnd:
                     # Show and bring to foreground
                     SW_RESTORE = 9
                     user32.ShowWindow(hwnd, SW_RESTORE)
                     user32.SetForegroundWindow(hwnd)
-                    log.info("Focused existing VoiceFlow window")
+                    log.info("Focused existing Dictore window")
             except Exception as e:
                 log.warning("Could not focus existing window", error=str(e))
             return False
@@ -269,7 +269,7 @@ if not ensure_single_instance():
 # QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
 print("[DEBUG] Creating Pyloid app...", flush=True)
-app = Pyloid(app_name="VoiceFlow", single_instance=True, server=server)
+app = Pyloid(app_name="Dictore", single_instance=True, server=server)
 print("[DEBUG] Pyloid app created", flush=True)
 
 # Tray-resident daemon: closing the dashboard window must NOT quit the app.
@@ -297,14 +297,14 @@ def _fast_get_window_by_id(self, window_id):
     return self.app.windows_dict.get(window_id)
 app.get_window_by_id = _types.MethodType(_fast_get_window_by_id, app)
 
-# Install the voiceflow:// handler on the default profile. The scheme itself
+# Install the dictore:// handler on the default profile. The scheme itself
 # was registered above (before QApplication). The handler must outlive every
 # request, so we hold a module-level reference — Qt holds a non-owning ref.
 from PySide6.QtWebEngineCore import QWebEngineProfile
-from services.recording.audio_scheme_handler import VoiceFlowAudioSchemeHandler
-_vf_audio_handler = VoiceFlowAudioSchemeHandler(get_controller().meetings.data_root)
-QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"voiceflow", _vf_audio_handler)
-log.info("voiceflow:// scheme handler installed",
+from services.recording.audio_scheme_handler import DictoreAudioSchemeHandler
+_vf_audio_handler = DictoreAudioSchemeHandler(get_controller().meetings.data_root)
+QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"dictore", _vf_audio_handler)
+log.info("dictore:// scheme handler installed",
          data_root=str(get_controller().meetings.data_root))
 
 print("[DEBUG] Setting icons...", flush=True)
@@ -527,7 +527,7 @@ def init_popup():
             webview.page().setBackgroundColor(QColor(0, 0, 0, 0))
 
             # Load the URL
-            if is_production():
+            if is_production() or os.path.exists(get_production_path("dist-front")):
                 url = pyloid_serve(directory=get_production_path("dist-front"))
                 popup_window.load_url(f"{url}#/popup")
             else:
@@ -834,19 +834,19 @@ register_window_actions(minimize_main_window, toggle_maximize_main_window, close
 
 # Main window setup
 print(f"[DEBUG] is_production={is_production()}", flush=True)
-if is_production():
+if is_production() or os.path.exists(get_production_path("dist-front")):
     print("[DEBUG] Serving dist-front...", flush=True)
     url = pyloid_serve(directory=get_production_path("dist-front"))
     print(f"[DEBUG] Served at {url}", flush=True)
     # Revert to standard frame, no transparency to fix crash
     print("[DEBUG] Creating main window...", flush=True)
-    window = app.create_window(title="VoiceFlow", frame=True, transparent=False, dev_tools=False)
+    window = app.create_window(title="Dictore", frame=True, transparent=False, dev_tools=True)
     print("[DEBUG] Main window created", flush=True)
     window.load_url(url)
     print("[DEBUG] URL loaded", flush=True)
 else:
     # Dev: Standard Frame
-    window = app.create_window(title="VoiceFlow", dev_tools=False, frame=True, transparent=False)
+    window = app.create_window(title="Dictore", dev_tools=True, frame=True, transparent=False)
     # try:
     #     window._window.web_view.page().setBackgroundColor(QColor(0, 0, 0, 0))
     # except Exception as e:

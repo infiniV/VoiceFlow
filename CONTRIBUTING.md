@@ -1,6 +1,6 @@
-# Contributing to VoiceFlow
+# Contributing to Dictore
 
-Thanks for your interest in contributing to VoiceFlow!
+Thanks for your interest in contributing to Dictore!
 
 ## Getting Started
 
@@ -14,8 +14,8 @@ Thanks for your interest in contributing to VoiceFlow!
 
 ```bash
 # Clone the repo
-git clone https://github.com/infiniV/VoiceFlow.git
-cd VoiceFlow
+git clone https://github.com/infiniV/Dictore.git
+cd Dictore
 
 # Install dependencies (Node + Python)
 pnpm run setup
@@ -68,7 +68,7 @@ Use conventional commits:
 ## Reporting Issues
 
 When opening an issue, please include:
-- VoiceFlow version
+- Dictore version
 - OS and version
 - Steps to reproduce
 - Expected vs actual behavior

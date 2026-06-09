@@ -65,7 +65,7 @@ export function MeetingImportDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-cream-muted leading-relaxed">
             Paste an absolute path to a WAV, MP3, or FLAC file on your machine.
-            VoiceFlow will copy it into your recordings library and transcribe
+            Dictore will copy it into your recordings library and transcribe
             it in the background.
           </DialogDescription>
         </DialogHeader>

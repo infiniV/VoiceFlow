@@ -1,6 +1,6 @@
 """Crash-recovery sweep for unfinished recordings (Q5).
 
-On VoiceFlow startup we look for any `recordings` row with a non-NULL
+On Dictore startup we look for any `recordings` row with a non-NULL
 `recorder_state` — that's a recording that was running when the app died.
 For each, we:
 

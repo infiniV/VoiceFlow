@@ -274,7 +274,7 @@ class ParecAudioSource:
         # PR_SET_PDEATHSIG so parec would die with the parent — but
         # preexec_fn is documented as unsafe in a multithreaded process
         # (subprocess docs: the child can deadlock before exec if it
-        # inherits a held lock from another thread). VoiceFlow has many
+        # inherits a held lock from another thread). Dictore has many
         # threads (writer, hotkey, asyncio RPC, transcribe queue, etc.)
         # and that deadlock fired in the field on Bluetooth source
         # selection — wedged the entire asyncio loop and corrupted

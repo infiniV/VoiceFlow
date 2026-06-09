@@ -4,7 +4,10 @@ export interface Settings {
   device: string;
   autoStart: boolean;
   retention: number;
-  theme: "system" | "light" | "dark";
+  theme: "midnight" | "aurora" | "ember" | "ocean" | "snowfall" | "neonCity";
+  autoRewriteEnabled: boolean;
+  rewritePreset: "grammar_correct" | "professional" | "casual_spoken" | "concise";
+  fillerRemovalEnabled: boolean;
   onboardingComplete: boolean;
   microphone: number;
   saveAudioToHistory: boolean;

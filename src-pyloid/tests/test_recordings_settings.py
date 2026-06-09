@@ -247,7 +247,7 @@ class TestRedactionFilter:
         filt = RedactionFilter()
         import logging as _logging
         rec = _logging.LogRecord(
-            name="VoiceFlow.llm",
+            name="Dictore.llm",
             level=_logging.INFO,
             pathname="x.py", lineno=1,
             msg="POST with Bearer sk-shouldhide12345",
@@ -260,7 +260,7 @@ class TestRedactionFilter:
         filt = RedactionFilter()
         import logging as _logging
         rec = _logging.LogRecord(
-            name="VoiceFlow.llm",
+            name="Dictore.llm",
             level=_logging.INFO,
             pathname="x.py", lineno=1,
             msg="sending request", args=None, exc_info=None,

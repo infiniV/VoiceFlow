@@ -1,4 +1,4 @@
-"""Tests for slice 8 — voiceflow:// audio scheme byte-range serving.
+"""Tests for slice 8 — dictore:// audio scheme byte-range serving.
 
 The Qt-facing wrapper (QWebEngineUrlSchemeHandler) is thin glue that translates
 QWebEngineUrlRequestJob into calls to this pure function. The pure function is
@@ -25,7 +25,7 @@ class TestResolveRecordingAudioURL:
         (tmp_path / "recordings").mkdir()
         (tmp_path / "recordings" / "42_x.wav").write_bytes(b"abc")
         path = resolve_recording_audio_url(
-            "voiceflow://recording/42_x.wav", data_root=tmp_path
+            "dictore://recording/42_x.wav", data_root=tmp_path
         )
         assert path == (tmp_path / "recordings" / "42_x.wav").resolve()
 
@@ -35,15 +35,15 @@ class TestResolveRecordingAudioURL:
         outside = tmp_path.parent / "evil.txt"
         outside.write_text("nope")
         path = resolve_recording_audio_url(
-            "voiceflow://recording/../evil.txt", data_root=tmp_path
+            "dictore://recording/../evil.txt", data_root=tmp_path
         )
         assert path is None
 
-    def test_refuses_non_voiceflow_scheme(self, tmp_path):
+    def test_refuses_non_dictore_scheme(self, tmp_path):
         assert resolve_recording_audio_url("http://recording/x.wav", data_root=tmp_path) is None
 
     def test_refuses_unknown_host(self, tmp_path):
-        assert resolve_recording_audio_url("voiceflow://other/x.wav", data_root=tmp_path) is None
+        assert resolve_recording_audio_url("dictore://other/x.wav", data_root=tmp_path) is None
 
 
 # ---------- byte-range serving ----------

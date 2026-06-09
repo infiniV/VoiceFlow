@@ -4,9 +4,19 @@ import { Lock, Gauge, Wand2 } from "lucide-react";
 export const APP_VERSION = "1.6.1";
 
 export const THEME_OPTIONS = [
-  { val: 'light', label: 'Light' },
-  { val: 'dark', label: 'Dark' },
-  { val: 'system', label: 'System' },
+  { val: 'midnight', label: 'Midnight' },
+  { val: 'aurora', label: 'Aurora' },
+  { val: 'ember', label: 'Ember' },
+  { val: 'ocean', label: 'Ocean' },
+  { val: 'snowfall', label: 'Snowfall' },
+  { val: 'neonCity', label: 'Neon City' },
+] as const;
+
+export const REWRITE_PRESET_OPTIONS = [
+  { val: 'grammar_correct', label: 'Grammar Correct', desc: 'Capitalize and punctuate' },
+  { val: 'professional', label: 'Professional', desc: 'Formal tone, expand contractions' },
+  { val: 'casual_spoken', label: 'Casual Spoken', desc: 'Lowercase, relaxed feel' },
+  { val: 'concise', label: 'Concise', desc: 'First sentence only' },
 ] as const;
 
 // All models supported by faster-whisper with descriptions

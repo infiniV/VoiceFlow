@@ -30,10 +30,10 @@ import type { Settings, Options, GpuInfo } from "@/lib/types";
 import {
   MODEL_OPTIONS,
   MODEL_CATEGORIES,
-  THEME_OPTIONS,
   ONBOARDING_FEATURES,
   isEnglishOnlyModel,
 } from "@/lib/constants";
+import { applyThemePalette, THEME_PALETTES } from "@/lib/themes";
 
 // ============================================================================
 // STEP: WELCOME
@@ -842,45 +842,41 @@ const StepTheme = ({
         interface theme
       </legend>
       <div
-        className="grid grid-cols-3 gap-3"
+        className="grid grid-cols-2 sm:grid-cols-3 gap-3"
         role="radiogroup"
         aria-label="Theme selection"
       >
-        {THEME_OPTIONS.map((opt) => {
-          const isActive = theme === opt.val;
+        {THEME_PALETTES.map((palette) => {
+          const isActive = theme === palette.id;
           return (
             <button
-              key={opt.val}
+              key={palette.id}
               type="button"
               role="radio"
               aria-checked={isActive}
               className={cn(
-                "relative p-5 rounded-md flex flex-col items-center gap-3 transition-colors border",
+                "relative p-4 rounded-xl flex flex-col items-start gap-3 transition-all border text-left",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:ring-offset-1",
                 isActive
-                  ? "border-accent-500/40 bg-accent-500/[0.06]"
+                  ? "border-accent-500/40 bg-accent-500/[0.06] ring-1 ring-accent-500/20"
                   : "border-border bg-secondary/30 hover:bg-secondary/60"
               )}
-              onClick={() => setTheme(opt.val as Settings["theme"])}
+              onClick={() => setTheme(palette.id as Settings["theme"])}
             >
               <div
-                className={cn(
-                  "w-12 h-12 rounded-md border border-border",
-                  opt.val === "light"
-                    ? "bg-[#fafafa]"
-                    : opt.val === "dark"
-                      ? "bg-[#09090b]"
-                      : "bg-gradient-to-br from-[#fafafa] to-[#09090b]"
-                )}
+                className="w-full h-10 rounded-lg"
+                style={{
+                  background: `linear-gradient(135deg, ${palette.accent}, ${palette.accentEnd})`,
+                }}
                 aria-hidden
               />
               <span
                 className={cn(
-                  "font-mono text-[11px] uppercase tracking-widest",
+                  "text-sm font-medium",
                   isActive ? "text-cream" : "text-cream-muted"
                 )}
               >
-                {opt.label}
+                {palette.name}
               </span>
               {isActive && (
                 <span
@@ -905,7 +901,7 @@ const StepTheme = ({
           Launch at login
         </label>
         <p className="text-xs text-cream-muted mt-1 leading-relaxed">
-          Start VoiceFlow when you sign in to your computer.
+          Start Dictore when you sign in to your computer.
         </p>
       </div>
       <Switch
@@ -951,7 +947,7 @@ const StepFinal = () => (
         strokeWidth={2}
       />
       <p className="text-sm text-cream-muted leading-relaxed">
-        VoiceFlow runs quietly in your system tray. Press the shortcut anytime,
+        Dictore runs quietly in your system tray. Press the shortcut anytime,
         anywhere to start dictating.
       </p>
     </div>
@@ -965,7 +961,7 @@ const StepFinal = () => (
 const STEPS_CONFIG = [
   {
     id: "welcome",
-    title: "Welcome to VoiceFlow",
+    title: "Welcome to Dictore",
     subtitle: "Transform your voice into text with local AI processing.",
     icon: Sparkles,
   },
@@ -1023,7 +1019,7 @@ export function Onboarding() {
   const [model, setModel] = useState("tiny");
   const [autoStart, setAutoStart] = useState(true);
   const [retention] = useState(-1);
-  const [theme, setTheme] = useState<Settings["theme"]>("dark");
+  const [theme, setTheme] = useState<Settings["theme"]>("midnight");
   const [microphone, setMicrophone] = useState<number>(0);
   const [device, setDevice] = useState("auto");
   const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null);
@@ -1064,12 +1060,7 @@ export function Onboarding() {
   };
 
   useEffect(() => {
-    const root = document.documentElement;
-    const isDark =
-      theme === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        : theme === "dark";
-    root.classList.toggle("dark", isDark);
+    applyThemePalette(theme);
   }, [theme]);
 
   const handleFinish = async () => {
@@ -1114,7 +1105,7 @@ export function Onboarding() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 rounded-full border-2 border-accent-500/30 border-t-accent-500 animate-spin" />
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-cream-muted/60">
-            initializing voiceflow…
+            initializing dictore…
           </p>
         </div>
       </main>

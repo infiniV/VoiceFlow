@@ -1,13 +1,13 @@
-; VoiceFlow Inno Setup Script
+; Dictore Inno Setup Script
 ; Creates a Windows installer from the PyInstaller --onedir output
 
-#define MyAppName "VoiceFlow"
+#define MyAppName "Dictore"
 #define MyAppVersion "1.6.1"
 #define MyAppPublisher "infiniV"
 #define MyAppURL "https://get-voice-flow.vercel.app/"
-#define MyAppSupportURL "https://github.com/infiniV/VoiceFlow/issues"
-#define MyAppUpdatesURL "https://github.com/infiniV/VoiceFlow/releases"
-#define MyAppExeName "VoiceFlow.exe"
+#define MyAppSupportURL "https://github.com/infiniV/Dictore/issues"
+#define MyAppUpdatesURL "https://github.com/infiniV/Dictore/releases"
+#define MyAppExeName "Dictore.exe"
 
 [Setup]
 ; App identity
@@ -28,7 +28,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; Output settings
 OutputDir=..\dist\installer
-OutputBaseFilename=VoiceFlowSetup-{#MyAppVersion}
+OutputBaseFilename=DictoreSetup-{#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAUseSeparateProcess=yes
@@ -61,12 +61,12 @@ Name: "startupicon"; Description: "Start {#MyAppName} when Windows starts"; Grou
 ; av/codec/codec.abi3.pyd). Without this, an upgrade leaves the older .pyd
 ; sitting next to the newer one and Python imports the stale version-tagged
 ; extension first, causing ImportError on missing symbols.
-; User data lives in %USERPROFILE%\.VoiceFlow and is NOT affected.
+; User data lives in %USERPROFILE%\.Dictore and is NOT affected.
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Files]
-; Include entire VoiceFlow directory from PyInstaller output
-Source: "..\dist\VoiceFlow\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Include entire Dictore directory from PyInstaller output
+Source: "..\dist\Dictore\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start Menu

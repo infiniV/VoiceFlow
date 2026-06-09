@@ -12,9 +12,9 @@ _RECORDING_UPDATABLE_FIELDS = frozenset({"title", "summary", "notes", "tags", "l
 class DatabaseService:
     def __init__(self, db_path: Optional[Path] = None):
         if db_path is None:
-            app_data = Path.home() / ".VoiceFlow"
+            app_data = Path.home() / ".Dictore"
             app_data.mkdir(exist_ok=True)
-            db_path = app_data / "VoiceFlow.db"
+            db_path = app_data / "Dictore.db"
 
         self.db_path = db_path
         self._init_db()

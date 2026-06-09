@@ -82,7 +82,7 @@ jobs:
         run: |
           # Use the system's libportaudio (the Ubuntu-bundled copy is ALSA-only
           # with no PipeWire/PulseAudio backend, so virtual devices are missing).
-          rm -f ./dist/VoiceFlow/_internal/libportaudio*
+          rm -f ./dist/Dictore/_internal/libportaudio*
           # Use the system's libasound. The bundled copy has its ALSA plugin
           # search path hardcoded at build time to the build host's layout
           # (e.g. /usr/lib/x86_64-linux-gnu/alsa-lib on Ubuntu). On distros
@@ -95,16 +95,16 @@ jobs:
           # has that exact filename in its NEEDED list (different SONAME from
           # libasound.so.2, so it doesn't conflict with the PortAudio side).
           # Removing it crashes startup with ImportError on libasound-cfbebb71.
-          rm -f ./dist/VoiceFlow/_internal/libasound*
+          rm -f ./dist/Dictore/_internal/libasound*
           echo "Removed bundled PortAudio + ALSA (will use system libraries at runtime)"
 
       - name: Clear executable stack flags
         run: |
           # python-build-standalone builds ship libpython with GNU_STACK RWE,
           # which Linux 6.8+ kernels reject. Clear the flag on all bundled .so files.
-          find ./dist/VoiceFlow -type f -name '*.so*' -exec execstack -c {} +
+          find ./dist/Dictore -type f -name '*.so*' -exec execstack -c {} +
           echo "Verifying no executable stacks remain..."
-          BAD=$(find ./dist/VoiceFlow -type f -name '*.so*' -exec sh -c \
+          BAD=$(find ./dist/Dictore -type f -name '*.so*' -exec sh -c \
             'readelf -l "$1" 2>/dev/null | grep -A1 GNU_STACK | grep -q RWE && echo "$1"' _ {} \;)
           if [ -n "$BAD" ]; then
             echo "::error::Files still have executable stack: $BAD"
@@ -114,7 +114,7 @@ jobs:
       - name: Smoke test - check for missing shared libraries
         run: |
           echo "Checking for missing shared libraries..."
-          MISSING=$(ldd ./dist/VoiceFlow/VoiceFlow 2>&1 | grep "not found" || true)
+          MISSING=$(ldd ./dist/Dictore/Dictore 2>&1 | grep "not found" || true)
           if [ -n "$MISSING" ]; then
             echo "::error::Missing shared libraries detected:"
             echo "$MISSING"
@@ -132,8 +132,8 @@ jobs:
         with:
           name: linux-artifacts
           path: |
-            dist/installer/VoiceFlow-*-linux-x86_64.tar.gz
-            dist/installer/VoiceFlow-*-x86_64.AppImage
+            dist/installer/Dictore-*-linux-x86_64.tar.gz
+            dist/installer/Dictore-*-x86_64.AppImage
           retention-days: 3
 
   build-windows:
@@ -189,7 +189,7 @@ jobs:
       - name: Patch installer version
         shell: bash
         run: |
-          sed -i "s/^#define MyAppVersion \".*\"/#define MyAppVersion \"${{ steps.version.outputs.version }}\"/" installer/voiceflow.iss
+          sed -i "s/^#define MyAppVersion \".*\"/#define MyAppVersion \"${{ steps.version.outputs.version }}\"/" installer/dictore.iss
 
       - name: Build Windows installer
         shell: cmd
@@ -200,7 +200,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
-          path: dist/installer/VoiceFlowSetup-*.exe
+          path: dist/installer/DictoreSetup-*.exe
           retention-days: 3
 
   release:
@@ -221,7 +221,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: VoiceFlow ${{ github.ref_name }}
+          name: Dictore ${{ github.ref_name }}
           draft: true
           generate_release_notes: true
           files: |

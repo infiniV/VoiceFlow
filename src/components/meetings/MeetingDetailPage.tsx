@@ -194,7 +194,7 @@ export function MeetingDetailPage() {
   }
 
   const audioSrc = recording.audioRelpath
-    ? `voiceflow://recording/${recording.audioRelpath.split("/").pop()}`
+    ? `dictore://recording/${recording.audioRelpath.split("/").pop()}`
     : null;
 
   const llmConfigured =

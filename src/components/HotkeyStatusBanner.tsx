@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { api } from "@/lib/api";
 
-const DISMISS_KEY = "voiceflow:hotkey-banner-dismissed-code";
+const DISMISS_KEY = "dictore:hotkey-banner-dismissed-code";
 
 export function HotkeyStatusBanner() {
   const [status, setStatus] = useState<{

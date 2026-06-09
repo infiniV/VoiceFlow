@@ -1,4 +1,4 @@
-"""voiceflow://recording/<filename.wav> scheme — byte-range audio serving.
+"""dictore://recording/<filename.wav> scheme — byte-range audio serving.
 
 A custom `QWebEngineUrlSchemeHandler` registered in `main.py` translates each
 incoming `QWebEngineUrlRequestJob` into a call to `serve_audio_range()`. That
@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 
-SCHEME = "voiceflow"
+SCHEME = "dictore"
 RECORDING_HOST = "recording"
 _RECORDINGS_DIRNAME = "recordings"
 
@@ -35,7 +35,7 @@ class AudioRangeResponse:
 # ---------- URL resolution ----------
 
 def resolve_recording_audio_url(url: str, data_root: Path) -> Optional[Path]:
-    """Map a voiceflow:// URL to the on-disk file, rejecting anything outside
+    """Map a dictore:// URL to the on-disk file, rejecting anything outside
     `<data_root>/recordings/`."""
     try:
         parsed = urllib.parse.urlparse(url)

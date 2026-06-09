@@ -3,7 +3,7 @@ Tests for the domain-based logging infrastructure.
 
 Design requirements:
 - Hybrid format: [timestamp] [LEVEL] [domain] message | {structured data}
-- File: ~/.VoiceFlow/VoiceFlow.log
+- File: ~/.Dictore/Dictore.log
 - Rotation: 100MB max, keeps 1 backup (.log.1)
 - Domains: model, audio, hotkey, settings, database, clipboard, window
 - Usage: get_logger("model") returns domain-specific logger
@@ -103,7 +103,7 @@ class TestLogFormat:
         """Log messages follow hybrid format: [timestamp] [LEVEL] [domain] message"""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("model")
@@ -120,7 +120,7 @@ class TestLogFormat:
         """Log with kwargs includes structured JSON data after pipe."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("model")
@@ -146,7 +146,7 @@ class TestLogFormat:
         """Log without kwargs does not include pipe separator."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("model")
@@ -163,7 +163,7 @@ class TestLogFormat:
         """All log levels work correctly."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("audio")
@@ -187,7 +187,7 @@ class TestLogRotation:
         """Log file is created at specified location."""
         from services.logger import setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         # Write something to ensure file is created
@@ -214,7 +214,7 @@ class TestLogRotation:
         """When log exceeds max size, backup is created with .log.1 extension."""
         from services.logger import setup_logging, get_logger
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         # Use small max size for testing
         setup_logging(log_file, max_bytes=1000, backup_count=1)
 
@@ -225,18 +225,18 @@ class TestLogRotation:
             log.info(f"Message {i}: " + "x" * 50)
 
         # Check that backup was created
-        backup_file = temp_log_dir / "VoiceFlow.log.1"
+        backup_file = temp_log_dir / "Dictore.log.1"
         assert backup_file.exists(), "Backup file should be created after rotation"
 
 
 class TestDefaultLogPath:
     """Tests for default log file path."""
 
-    def test_default_log_path_is_in_voiceflow_dir(self):
-        """Default log path is ~/.VoiceFlow/VoiceFlow.log"""
+    def test_default_log_path_is_in_dictore_dir(self):
+        """Default log path is ~/.Dictore/Dictore.log"""
         from services.logger import get_default_log_path
 
-        expected = Path.home() / ".VoiceFlow" / "VoiceFlow.log"
+        expected = Path.home() / ".Dictore" / "Dictore.log"
         assert get_default_log_path() == expected
 
 
@@ -247,7 +247,7 @@ class TestDomainLoggerInterface:
         """info() accepts keyword arguments for structured data."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("model")
@@ -263,7 +263,7 @@ class TestDomainLoggerInterface:
         """error() accepts keyword arguments for structured data."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("audio")
@@ -278,7 +278,7 @@ class TestDomainLoggerInterface:
         """debug() accepts keyword arguments for structured data."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("hotkey")
@@ -292,7 +292,7 @@ class TestDomainLoggerInterface:
         """warning() accepts keyword arguments for structured data."""
         from services.logger import get_logger, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log = get_logger("settings")
@@ -310,7 +310,7 @@ class TestLoggerReset:
         """reset_logging() clears all logger state for test isolation."""
         from services.logger import get_logger, reset_logging, setup_logging
 
-        log_file = temp_log_dir / "VoiceFlow.log"
+        log_file = temp_log_dir / "Dictore.log"
         setup_logging(log_file)
 
         log1 = get_logger("model")
@@ -320,7 +320,7 @@ class TestLoggerReset:
         reset_logging()
 
         # After reset, setup should be needed again
-        log_file2 = temp_log_dir / "VoiceFlow2.log"
+        log_file2 = temp_log_dir / "Dictore2.log"
         setup_logging(log_file2)
 
         log2 = get_logger("model")

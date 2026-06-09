@@ -211,7 +211,7 @@ export function ModelDownloadProgress({
                   %USERPROFILE%\.cache\huggingface\hub\
                 </code>
               </li>
-              <li>Restart VoiceFlow</li>
+              <li>Restart Dictore</li>
             </ol>
           </div>
         )}

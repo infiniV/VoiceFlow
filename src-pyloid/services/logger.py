@@ -1,8 +1,8 @@
 """
-Domain-based logging for VoiceFlow.
+Domain-based logging for Dictore.
 
 Hybrid format: [timestamp] [LEVEL] [domain] message | {structured data}
-File: ~/.VoiceFlow/VoiceFlow.log
+File: ~/.Dictore/Dictore.log
 Rotation: 100MB max, 1 backup (.log.1)
 Domains: model, audio, hotkey, settings, database, clipboard, window
 
@@ -106,7 +106,7 @@ _console_handler: Optional[logging.StreamHandler] = None
 
 def get_default_log_path() -> Path:
     """Get the default log file path."""
-    return Path.home() / ".VoiceFlow" / "VoiceFlow.log"
+    return Path.home() / ".Dictore" / "Dictore.log"
 
 
 class HybridFormatter(logging.Formatter):
@@ -130,7 +130,7 @@ class HybridFormatter(logging.Formatter):
         if level == "WARNING":
             level = "WARN"
 
-        # Get domain from logger name (format: VoiceFlow.domain)
+        # Get domain from logger name (format: Dictore.domain)
         parts = record.name.split('.')
         domain = parts[1] if len(parts) > 1 else "app"
 
@@ -205,7 +205,7 @@ def setup_logging(
     Initialize the logging system.
 
     Args:
-        log_file: Path to log file. Defaults to ~/.VoiceFlow/VoiceFlow.log
+        log_file: Path to log file. Defaults to ~/.Dictore/Dictore.log
         max_bytes: Maximum file size before rotation. Defaults to 100MB.
         backup_count: Number of backup files to keep. Defaults to 1.
     """
@@ -242,8 +242,8 @@ def setup_logging(
     _console_handler.setFormatter(formatter)
     _console_handler.addFilter(redaction_filter)
 
-    # Set up root logger for VoiceFlow
-    root_logger = logging.getLogger("VoiceFlow")
+    # Set up root logger for Dictore
+    root_logger = logging.getLogger("Dictore")
     root_logger.setLevel(logging.DEBUG)
     root_logger.handlers.clear()
     root_logger.addHandler(_file_handler)
@@ -265,12 +265,12 @@ def reset_logging() -> None:
         _console_handler.close()
 
     # Clear root logger
-    root_logger = logging.getLogger("VoiceFlow")
+    root_logger = logging.getLogger("Dictore")
     root_logger.handlers.clear()
 
     # Clear all domain loggers
     for name in list(logging.Logger.manager.loggerDict.keys()):
-        if name.startswith("VoiceFlow."):
+        if name.startswith("Dictore."):
             logger = logging.getLogger(name)
             logger.handlers.clear()
 
@@ -303,7 +303,7 @@ def get_logger(domain: str) -> DomainLogger:
         setup_logging()
 
     # Create underlying Python logger
-    logger_name = f"VoiceFlow.{domain}"
+    logger_name = f"Dictore.{domain}"
     py_logger = logging.getLogger(logger_name)
     py_logger.setLevel(logging.DEBUG)
 
@@ -344,11 +344,11 @@ def exception(msg: str, *args, **kwargs):
 def setup_logger() -> logging.Logger:
     """Legacy setup function for backward compatibility."""
     setup_logging()
-    return logging.getLogger("VoiceFlow")
+    return logging.getLogger("Dictore")
 
 
 def get_log_dir() -> Path:
     """Legacy function to get log directory."""
-    log_dir = Path.home() / ".VoiceFlow"
+    log_dir = Path.home() / ".Dictore"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir

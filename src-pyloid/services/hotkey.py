@@ -114,7 +114,7 @@ if IS_LINUX:
     import evdev
     import select
 
-    # Map evdev key codes to VoiceFlow key names
+    # Map evdev key codes to Dictore key names
     _EVDEV_MODIFIER_CODES = {
         evdev.ecodes.KEY_LEFTCTRL: 'ctrl',
         evdev.ecodes.KEY_RIGHTCTRL: 'ctrl',
@@ -152,7 +152,7 @@ if IS_LINUX:
         _EVDEV_KEY_MAP[getattr(evdev.ecodes, f'KEY_F{i}')] = f'f{i}'
 
     def _evdev_code_to_name(code: int) -> Optional[str]:
-        """Convert evdev keycode to VoiceFlow key name."""
+        """Convert evdev keycode to Dictore key name."""
         if code in _EVDEV_MODIFIER_CODES:
             return _EVDEV_MODIFIER_CODES[code]
         return _EVDEV_KEY_MAP.get(code)
@@ -429,7 +429,7 @@ class HotkeyService:
                 "available": False,
                 "code": "no_input_access",
                 "message": (
-                    "VoiceFlow couldn't read any keyboard device, so global "
+                    "Dictore couldn't read any keyboard device, so global "
                     "hotkeys are disabled. Add your user to the 'input' group "
                     "and log out + back in: sudo usermod -aG input $USER"
                 ),

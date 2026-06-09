@@ -1,4 +1,4 @@
-"""Qt glue for the voiceflow:// custom URL scheme.
+"""Qt glue for the dictore:// custom URL scheme.
 
 Pure HTTP semantics live in `audio_scheme.py` (engine-free, unit-tested).
 This module owns the `QWebEngineUrlSchemeHandler` subclass that translates
@@ -30,8 +30,8 @@ from services.recording.audio_scheme import (
 _log = get_logger("audio")
 
 
-class VoiceFlowAudioSchemeHandler(QWebEngineUrlSchemeHandler):
-    """Serves voiceflow://recording/<file>.wav with HTTP Range support.
+class DictoreAudioSchemeHandler(QWebEngineUrlSchemeHandler):
+    """Serves dictore://recording/<file>.wav with HTTP Range support.
 
     The HTML5 <audio> element on MeetingDetailPage points at this URL; Qt
     intercepts the request and routes it here. Range requests are required
@@ -53,7 +53,7 @@ class VoiceFlowAudioSchemeHandler(QWebEngineUrlSchemeHandler):
 
             file_path = resolve_recording_audio_url(url, self._data_root)
             if file_path is None:
-                _log.warning("voiceflow:// URL did not resolve", url=url)
+                _log.warning("dictore:// URL did not resolve", url=url)
                 job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
                 return
 
@@ -89,7 +89,7 @@ class VoiceFlowAudioSchemeHandler(QWebEngineUrlSchemeHandler):
             mime = response.headers.get("Content-Type", "audio/wav").encode("ascii")
             job.reply(QByteArray(mime), buffer)
         except Exception as e:
-            _log.error("voiceflow:// request failed", error=str(e))
+            _log.error("dictore:// request failed", error=str(e))
             try:
                 job.fail(QWebEngineUrlRequestJob.Error.RequestFailed)
             except Exception:

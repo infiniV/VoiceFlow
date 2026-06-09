@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=VoiceFlow
+Name=Dictore
 GenericName=Voice Dictation
 Comment=Voice dictation with Whisper. Hold a hotkey to record, release to paste the transcript. Runs offline.
-Exec=VoiceFlow
-Icon=voiceflow
+Exec=Dictore
+Icon=dictore
 Categories=Utility;AudioVideo;Audio;Office;
 Keywords=voice;dictation;speech;transcription;whisper;stt;voice-to-text;offline;wayland;
 Terminal=false
 StartupNotify=true
-StartupWMClass=VoiceFlow
+StartupWMClass=Dictore

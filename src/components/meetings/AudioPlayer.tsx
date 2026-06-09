@@ -1,6 +1,6 @@
 /* Custom-styled audio player.
 
-   Streams the recording via the `voiceflow://recording/<filename>.wav` URL
+   Streams the recording via the `dictore://recording/<filename>.wav` URL
    scheme registered in main.py (slice 8) — the HTML5 <audio> element handles
    the Range requests natively. Exposes `seekTo(ms)` via a forwarded ref so the
    transcript view can scroll-and-seek on segment click. */

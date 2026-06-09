@@ -1,6 +1,6 @@
 {
-  "name": "VoiceFlow",
-  "short_name": "VoiceFlow",
+  "name": "Dictore",
+  "short_name": "Dictore",
   "description": "Offline voice-to-text dictation for Windows and Linux, using Whisper.",
   "icons": [
     {

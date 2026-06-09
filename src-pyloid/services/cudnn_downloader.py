@@ -1,7 +1,7 @@
 """
 CUDA libraries auto-downloader.
 
-On Windows: Downloads cuDNN and cuBLAS DLLs from NVIDIA's public CDN to ~/.VoiceFlow/cuda/
+On Windows: Downloads cuDNN and cuBLAS DLLs from NVIDIA's public CDN to ~/.Dictore/cuda/
 On Linux: CUDA libs are provided by nvidia pip packages (cublas etc.) and preloaded at startup.
 No login required - uses the redistributable packages.
 """
@@ -66,7 +66,7 @@ def get_cuda_dir() -> Path:
         base = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
     else:
         base = Path.home()
-    return base / ".VoiceFlow" / "cuda"
+    return base / ".Dictore" / "cuda"
 
 
 def _find_nvidia_pip_lib(lib_name: str) -> bool:
@@ -173,30 +173,65 @@ def _download_and_extract(
     """
     global _download_progress
     import urllib.request
+    import urllib.error
 
     log.info(f"Starting {name} download", url=url)
     _download_progress.status = f"Downloading {name}..."
 
-    # Download to temp file
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-        tmp_path = tmp.name
+    tmp_path = cuda_dir / f"{name}_partial.zip"
+    
+    existing_size = 0
+    if tmp_path.exists():
+        existing_size = tmp_path.stat().st_size
+
+    headers = {"User-Agent": "Dictore/1.0"}
+    if existing_size > 0:
+        headers["Range"] = f"bytes={existing_size}-"
+        log.info(f"Resuming {name} download from {existing_size} bytes")
 
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "VoiceFlow/1.0"})
-        with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
-            file_size = int(response.headers.get("Content-Length", 0))
-            downloaded = 0
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            response = urllib.request.urlopen(req, context=ctx, timeout=60)
+            status_code = response.getcode()
+        except urllib.error.HTTPError as e:
+            if e.code == 416:
+                # Requested range not satisfiable - file is probably fully downloaded
+                log.info(f"Range not satisfiable for {name}, assuming download complete.")
+                response = None
+                status_code = 416
+            else:
+                raise e
+
+        downloaded = existing_size
+
+        if response is not None:
+            if status_code == 200:
+                # Server ignored Range or we didn't send one
+                mode = "wb"
+                downloaded = 0
+                existing_size = 0
+            else:
+                # 206 Partial Content
+                mode = "ab"
+
+            file_size = int(response.headers.get("Content-Length", 0)) + existing_size
             chunk_size = 1024 * 1024  # 1MB chunks
 
             log.info(f"Downloading {name}", total_mb=file_size / (1024*1024))
 
-            with open(tmp_path, "wb") as f:
+            with open(tmp_path, mode) as f:
                 while True:
                     if cancel_check and cancel_check():
                         log.info(f"{name} download cancelled")
                         return False, "Download cancelled", downloaded
 
-                    chunk = response.read(chunk_size)
+                    try:
+                        chunk = response.read(chunk_size)
+                    except Exception as e:
+                        log.error(f"Network error reading chunk for {name}: {e}")
+                        return False, f"Network error: {e}", downloaded
+
                     if not chunk:
                         break
 
@@ -207,26 +242,41 @@ def _download_and_extract(
                     _download_progress.downloaded_bytes = base_downloaded + downloaded
                     _download_progress.percent = int(((base_downloaded + downloaded) / total_combined) * 100) if total_combined > 0 else 0
 
+            response.close()
+
         log.info(f"{name} download complete, extracting DLLs")
         _download_progress.status = f"Extracting {name}..."
 
         # Extract DLLs
-        with zipfile.ZipFile(tmp_path, "r") as zf:
-            for zip_name in zf.namelist():
-                basename = os.path.basename(zip_name)
-                if basename.endswith(".dll"):
-                    target = cuda_dir / basename
-                    with zf.open(zip_name) as src, open(target, "wb") as dst:
-                        shutil.copyfileobj(src, dst)
-                    log.debug("Extracted", dll=basename)
+        try:
+            with zipfile.ZipFile(tmp_path, "r") as zf:
+                for zip_name in zf.namelist():
+                    basename = os.path.basename(zip_name)
+                    if basename.endswith(".dll"):
+                        target = cuda_dir / basename
+                        with zf.open(zip_name) as src, open(target, "wb") as dst:
+                            shutil.copyfileobj(src, dst)
+                        log.debug("Extracted", dll=basename)
+        except zipfile.BadZipFile:
+            log.error(f"Bad zip file for {name}, removing partial file")
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
+            return False, "Corrupted download file, please try again", 0
+
+        # Success! Remove the partial zip to save space
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
 
         return True, None, downloaded
 
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+    except Exception as e:
+        error_msg = str(e)
+        log.error(f"Error downloading {name}", error=error_msg)
+        return False, error_msg, existing_size
 
 
 def download_cudnn(
@@ -270,14 +320,14 @@ def download_cudnn(
 
         try:
             _download_progress.status = "Checking download sizes..."
-            req = urllib.request.Request(CUDNN_URL, method='HEAD', headers={"User-Agent": "VoiceFlow/1.0"})
+            req = urllib.request.Request(CUDNN_URL, method='HEAD', headers={"User-Agent": "Dictore/1.0"})
             with urllib.request.urlopen(req, context=ctx, timeout=30) as response:
                 cudnn_size = int(response.headers.get("Content-Length", 550 * 1024 * 1024))
         except Exception:
             cudnn_size = 550 * 1024 * 1024  # ~550MB estimate
 
         try:
-            req = urllib.request.Request(CUBLAS_URL, method='HEAD', headers={"User-Agent": "VoiceFlow/1.0"})
+            req = urllib.request.Request(CUBLAS_URL, method='HEAD', headers={"User-Agent": "Dictore/1.0"})
             with urllib.request.urlopen(req, context=ctx, timeout=30) as response:
                 cublas_size = int(response.headers.get("Content-Length", 330 * 1024 * 1024))
         except Exception:
@@ -289,24 +339,31 @@ def download_cudnn(
         log.info("Starting CUDA libraries download", cudnn_mb=cudnn_size/(1024*1024), cublas_mb=cublas_size/(1024*1024))
 
         # Download cuDNN first
-        success, error, cudnn_downloaded = _download_and_extract(
-            CUDNN_URL, "cuDNN", cuda_dir, ctx, cancel_check, 0, total_size
-        )
-        if not success:
-            _download_progress.downloading = False
-            _download_progress.complete = True
-            _download_progress.error = error
-            return False, error
+        cudnn_downloaded = cudnn_size if is_cudnn_installed() else 0
+        if not is_cudnn_installed():
+            success, error, cudnn_downloaded = _download_and_extract(
+                CUDNN_URL, "cuDNN", cuda_dir, ctx, cancel_check, 0, total_size
+            )
+            if not success:
+                _download_progress.downloading = False
+                _download_progress.complete = True
+                _download_progress.error = error
+                return False, error
+        else:
+            log.info("cuDNN already installed, skipping download")
 
         # Download cuBLAS
-        success, error, cublas_downloaded = _download_and_extract(
-            CUBLAS_URL, "cuBLAS", cuda_dir, ctx, cancel_check, cudnn_downloaded, total_size
-        )
-        if not success:
-            _download_progress.downloading = False
-            _download_progress.complete = True
-            _download_progress.error = error
-            return False, error
+        if not is_cublas_installed():
+            success, error, cublas_downloaded = _download_and_extract(
+                CUBLAS_URL, "cuBLAS", cuda_dir, ctx, cancel_check, cudnn_downloaded, total_size
+            )
+            if not success:
+                _download_progress.downloading = False
+                _download_progress.complete = True
+                _download_progress.error = error
+                return False, error
+        else:
+            log.info("cuBLAS already installed, skipping download")
 
         log.info("CUDA libraries installation complete", path=str(cuda_dir))
         _download_progress.status = "Verifying installation..."
