@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from services.hotkey import HotkeyService, normalize_hotkey, validate_hotkey, are_hotkeys_conflicting
 
 
@@ -123,6 +124,46 @@ class TestAreHotkeysConflicting:
 
 
 class TestHotkeyService:
+    def test_release_of_hold_key_deactivates_without_polling_keyboard_state(self):
+        service = HotkeyService()
+        deactivations = []
+        service.set_callbacks(lambda: None, lambda: deactivations.append(True))
+        service._hold_hotkey = "ctrl+win"
+        service._hold_active = True
+
+        service._check_hold_release_keyboard(SimpleNamespace(name="left windows"))
+
+        assert service._hold_active is False
+        assert deactivations == [True]
+
+    def test_unrelated_release_does_not_deactivate_hold(self):
+        service = HotkeyService()
+        service._hold_hotkey = "ctrl+win"
+        service._hold_active = True
+
+        service._check_hold_release_keyboard(SimpleNamespace(name="a"))
+
+        assert service._hold_active is True
+
+    def test_watchdog_detects_missing_hold_key(self, monkeypatch):
+        service = HotkeyService()
+        deactivations = []
+        service.set_callbacks(lambda: None, lambda: deactivations.append(True))
+        service._hold_hotkey = "ctrl+win"
+        service._hold_active = True
+        monkeypatch.setattr(service, "_start_hold_watchdog", lambda: None)
+
+        class Keyboard:
+            @staticmethod
+            def is_pressed(key):
+                return key in {"ctrl", "left ctrl", "right ctrl"}
+
+        monkeypatch.setitem(__import__("sys").modules, "keyboard", Keyboard)
+        service._check_hold_watchdog()
+
+        assert service._hold_active is False
+        assert deactivations == [True]
+
     def test_initial_state_not_running(self):
         """Hotkey service starts in non-running state."""
         service = HotkeyService()

@@ -185,6 +185,7 @@ class HotkeyService:
         self._toggle_active = False
         self._running = False
         self._max_recording_timer: Optional[threading.Timer] = None
+        self._hold_watchdog_timer: Optional[threading.Timer] = None
 
         # Hotkey configuration (defaults)
         self._hold_hotkey: str = "ctrl+win"
@@ -262,6 +263,7 @@ class HotkeyService:
             return  # Already recording in some mode
 
         self._hold_active = True
+        self._start_hold_watchdog()
         log.info("Hold hotkey activated")
         if self._on_activate:
             self._on_activate()
@@ -271,6 +273,7 @@ class HotkeyService:
         if not self._hold_active:
             return
         self._hold_active = False
+        self._cancel_hold_watchdog()
         self._cancel_max_timer()
         log.info("Hold hotkey deactivated")
         if self._on_deactivate:
@@ -323,6 +326,37 @@ class HotkeyService:
             self._deactivate_hold()
         elif self._toggle_active:
             self._deactivate_toggle()
+
+    def _start_hold_watchdog(self):
+        """Recover when Windows or the keyboard hook drops a key-up event."""
+        if IS_LINUX:
+            return
+        self._cancel_hold_watchdog()
+        self._hold_watchdog_timer = threading.Timer(0.25, self._check_hold_watchdog)
+        self._hold_watchdog_timer.daemon = True
+        self._hold_watchdog_timer.start()
+
+    def _cancel_hold_watchdog(self):
+        if self._hold_watchdog_timer:
+            self._hold_watchdog_timer.cancel()
+            self._hold_watchdog_timer = None
+
+    def _check_hold_watchdog(self):
+        self._hold_watchdog_timer = None
+        if not self._hold_active:
+            return
+
+        try:
+            import keyboard
+            if not self._are_hold_keys_pressed_keyboard(keyboard):
+                log.warning("Hold hotkey release recovered by watchdog")
+                self._deactivate_hold()
+                return
+        except Exception as e:
+            log.warning("Hold hotkey watchdog check failed", error=str(e))
+
+        if self._hold_active:
+            self._start_hold_watchdog()
 
     # ========================================================================
     # Platform-specific hotkey registration
@@ -385,24 +419,39 @@ class HotkeyService:
 
     def _check_hold_release_keyboard(self, event):
         """Check if hold hotkey should be deactivated on key release (Windows)."""
-        import keyboard
         if not self._hold_active:
             return
 
-        keys = self._parse_hotkey_keys(self._hold_hotkey)
-        all_pressed = True
-        for key in keys:
-            if key == 'win':
-                if not (keyboard.is_pressed('win') or keyboard.is_pressed('windows')):
-                    all_pressed = False
-                    break
-            elif not keyboard.is_pressed(key):
-                all_pressed = False
-                break
-
-        if not all_pressed:
+        released_key = self._normalize_keyboard_event_key(event.name)
+        if released_key in set(self._parse_hotkey_keys(self._hold_hotkey)):
             log.debug("Hold key released", key=event.name)
             self._deactivate_hold()
+
+    @staticmethod
+    def _normalize_keyboard_event_key(key: str) -> str:
+        key = key.strip().lower()
+        if key in ('windows', 'left windows', 'right windows', 'left win', 'right win'):
+            return 'win'
+        if key in ('control', 'left ctrl', 'right ctrl'):
+            return 'ctrl'
+        if key in ('left alt', 'right alt', 'alt gr'):
+            return 'alt'
+        if key in ('left shift', 'right shift'):
+            return 'shift'
+        return key
+
+    def _are_hold_keys_pressed_keyboard(self, keyboard_module) -> bool:
+        aliases_by_key = {
+            'win': ('win', 'windows', 'left windows', 'right windows'),
+            'ctrl': ('ctrl', 'left ctrl', 'right ctrl'),
+            'alt': ('alt', 'left alt', 'right alt'),
+            'shift': ('shift', 'left shift', 'right shift'),
+        }
+        for key in self._parse_hotkey_keys(self._hold_hotkey):
+            aliases = aliases_by_key.get(key, (key,))
+            if not any(keyboard_module.is_pressed(alias) for alias in aliases):
+                return False
+        return True
 
     def _register_toggle_hotkey_keyboard(self):
         """Register toggle hotkey using keyboard library (Windows)."""
@@ -533,6 +582,7 @@ class HotkeyService:
     def stop(self):
         """Stop listening for hotkeys."""
         self._running = False
+        self._cancel_hold_watchdog()
         self._unregister_hotkeys()
         self._cancel_max_timer()
         self._hold_active = False

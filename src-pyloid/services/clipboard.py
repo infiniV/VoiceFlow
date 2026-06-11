@@ -106,8 +106,18 @@ class ClipboardService:
                 log.warning("Paste tool failed, falling back to pyautogui",
                             tool=self._paste_tool, error=str(e))
 
-        # Fallback: pyautogui (works via XWayland)
-        self._get_pyautogui().hotkey('ctrl', 'v')
+        if sys.platform == 'win32':
+            # pyautogui's key injection is unreliable in some Windows desktop
+            # sessions. The keyboard library uses the same low-level backend as
+            # our global hotkey listener and consistently reaches native/UWP
+            # text fields.
+            import keyboard
+            keyboard.send('ctrl+v')
+            return
+
+        # Fallback for X11 and other desktop sessions.
+        pyautogui = self._get_pyautogui()
+        pyautogui.hotkey('ctrl', 'v')
 
     def paste_at_cursor(self, text: str):
         """Copy text to clipboard and paste at current cursor position."""
