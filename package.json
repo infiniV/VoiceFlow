@@ -94,5 +94,6 @@
     "typescript": "~5.6.3",
     "typescript-eslint": "^8.59.3",
     "vite": "^6.4.2"
-  }
+  },  
+  "packageManager": "pnpm@11.8.0"
 }
