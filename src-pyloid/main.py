@@ -656,7 +656,8 @@ def on_data_reset():
 
 def send_download_progress(event_name: str, data: dict):
     """Send download progress events to the main window."""
-    send_main_window_event(event_name, data)
+    if _bridge:
+        _bridge.emit_event(event_name, data)
 
 
 def on_popup_visibility_changed(visible: bool):
@@ -680,6 +681,8 @@ def on_popup_visibility_changed(visible: bool):
 register_onboarding_complete_callback(on_onboarding_complete)
 register_data_reset_callback(on_data_reset)
 register_download_progress_callback(send_download_progress)
+_bridge.on("download-progress", lambda data: send_main_window_event("download-progress", data))
+_bridge.on("download-complete", lambda data: send_main_window_event("download-complete", data))
 register_popup_visibility_callback(on_popup_visibility_changed)
 
 # Register main-thread handlers on the bridge (QueuedConnection inside the

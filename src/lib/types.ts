@@ -69,6 +69,7 @@ export interface ModelInfo {
  *  Lets a remounted view re-attach instead of losing the running download. */
 export interface DownloadStatus {
   active: boolean;
+  cancelling?: boolean;
   model?: string | null;
   percent?: number;
   downloadedBytes?: number;

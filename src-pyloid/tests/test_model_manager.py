@@ -152,6 +152,16 @@ class TestModelManager:
         result = model_manager.is_model_cached("nonexistent-fake-model-xyz123")
         assert result is False
 
+    def test_partial_snapshot_is_not_cached(self, model_manager, tmp_path):
+        """Weights alone cannot make a snapshot ready for offline transcription."""
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        with patch("huggingface_hub.snapshot_download", return_value=str(tmp_path)):
+            assert not model_manager.is_model_cached("tiny")
+            (tmp_path / "model.bin").write_bytes(b"weights")
+            assert not model_manager.is_model_cached("tiny")
+            (tmp_path / "tokenizer.json").write_text("{}", encoding="utf-8")
+            assert model_manager.is_model_cached("tiny")
+
     def test_get_model_info_returns_model_info(self, model_manager):
         """get_model_info returns ModelInfo with correct fields."""
         from services.model_manager import ModelInfo
@@ -581,14 +591,67 @@ class TestDownloadSession:
     def test_cancel_with_no_active_download(self, manager):
         assert manager.cancel_download() == {"success": True, "cancelled": False}
 
+    def test_cancel_waits_for_hub_before_cache_can_be_deleted(self, manager, tmp_path, monkeypatch):
+        """Protect the partial file until the cancelled Hub call returns."""
+        import threading
+
+        entered = threading.Event()
+        release = threading.Event()
+        finished = threading.Event()
+        cache = tmp_path / "models--Systran--faster-whisper-tiny"
+        cache.mkdir()
+        (cache / "model.incomplete").write_bytes(b"partial")
+        monkeypatch.setattr(manager, "get_cache_dir", lambda: str(tmp_path))
+
+        def snapshot(*args, **kwargs):
+            """Simulate a transfer still holding the cache after cancellation."""
+            if kwargs.get("local_files_only"):
+                return str(cache)
+            entered.set()
+            assert release.wait(5)
+            return str(cache)
+
+        events = []
+
+        def emit(name, payload):
+            """Capture the session result and signal that the worker finished."""
+            events.append((name, payload))
+            if name == "download-complete":
+                finished.set()
+
+        with patch("huggingface_hub.snapshot_download", side_effect=snapshot) as download:
+            manager.start_download("tiny", emit)
+            assert entered.wait(5)
+            manager.start_download("tiny", emit)
+            assert download.call_count == 2  # one cache check and one download
+            try:
+                assert manager.cancel_download()["cancelled"]
+                assert manager.get_download_status()["active"]
+                assert not manager.delete_model("tiny")["success"]
+                assert not manager.clear_cache()["success"]
+                assert (cache / "model.incomplete").exists()
+                assert not finished.is_set()
+            finally:
+                release.set()
+            assert finished.wait(5)
+
+        assert events[-1] == ("download-complete", {"model": "tiny", "success": False, "cancelled": True})
+        assert manager.delete_model("tiny")["success"]
+        assert not cache.exists()
+
 
 class TestDeleteModel:
     """Tests for single-model deletion.
 
     delete_model deletes only the HuggingFace cache folder for one model,
     leaving every other model untouched (unlike clear_cache which wipes all).
-    HOME is redirected to a tmp dir so we never touch the real cache.
+    The Hub cache path is redirected to a tmp dir.
     """
+
+    @pytest.fixture(autouse=True)
+    def isolated_cache(self, tmp_path, monkeypatch):
+        """Keep cache deletion tests isolated from installed models."""
+        monkeypatch.setattr("huggingface_hub.constants.HF_HUB_CACHE", tmp_path / ".cache/huggingface/hub")
 
     def _make_cached(self, home: Path, model_name: str, size: int = 4096) -> Path:
         """Create a fake HF cache folder for a model with one file of `size`."""

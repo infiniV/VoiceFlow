@@ -168,7 +168,7 @@ export function ModelDownloadProgress({
             </div>
             <div>
               <p className="font-medium text-foreground">
-                Downloading {modelName}
+                {state === "cancelling" ? "Stopping" : "Downloading"} {modelName}
               </p>
               <p className="text-xs text-muted-foreground">
                 AI model for transcription
@@ -206,10 +206,11 @@ export function ModelDownloadProgress({
       <Button
         variant="ghost"
         onClick={cancel}
+        disabled={state === "cancelling"}
         className="w-full rounded-xl text-muted-foreground hover:text-destructive"
       >
         <X className="w-4 h-4 mr-2" />
-        Cancel Download
+        {state === "cancelling" ? "Waiting for the download to stop…" : "Cancel Download"}
       </Button>
 
       <p className="text-xs text-center text-muted-foreground">

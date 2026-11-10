@@ -34,6 +34,16 @@ from services.model_catalog import (
 
 log = get_logger("model")
 
+_REQUIRED_MODEL_FILES = ("config.json", "model.bin", "tokenizer.json")
+_DOWNLOAD_BUSY = "A model download is still running. Cancel it and wait for it to stop before deleting cached files."
+
+
+def _has_model_files(snapshot: str) -> bool:
+    """Check that the files needed for offline loading are present and nonempty."""
+    path = Path(snapshot)
+    return all((path / name).is_file() and (path / name).stat().st_size > 0
+               for name in _REQUIRED_MODEL_FILES)
+
 
 @dataclass
 class CancelToken:
@@ -184,15 +194,20 @@ class ModelManager:
             True if the model is cached, False otherwise.
         """
         try:
-            from huggingface_hub import snapshot_download
-
-            repo_id = _get_repo_id(model_name)
-            # Try to get model path with local_files_only - raises if not cached
-            snapshot_download(repo_id, local_files_only=True)
+            self.get_cached_model_path(model_name)
             return True
         except Exception:
             # Model not found in cache
             return False
+
+    def get_cached_model_path(self, model_name: str) -> str:
+        """Resolve a complete local snapshot without initiating a download."""
+        from huggingface_hub import snapshot_download
+
+        snapshot = snapshot_download(_get_repo_id(model_name), local_files_only=True)
+        if not _has_model_files(snapshot):
+            raise FileNotFoundError(f"The cached {model_name} model is incomplete. Retry the download.")
+        return snapshot
 
     def get_model_info(self, model_name: str) -> ModelInfo:
         """
@@ -228,14 +243,12 @@ class ModelManager:
             on_progress: Callback for progress updates
             cancel_token: Token to cancel the download
 
-        Returns:
-            True if download completed successfully, False if cancelled or failed
+        Returns True on success and False on cancellation. Download errors
+        propagate so the UI can show the reason.
         """
-        if cancel_token.is_cancelled():
-            log.info("Download cancelled before start", model=model_name)
-            return False
-
         with self._download_lock:
+            if cancel_token.is_cancelled():
+                return False
             return self._do_download(model_name, on_progress, cancel_token)
 
     def _do_download(
@@ -248,7 +261,7 @@ class ModelManager:
         Internal download implementation.
 
         Uses huggingface_hub.snapshot_download() with progress tracking.
-        Runs download in a daemon thread so cancellation can abandon it.
+        Holds the cache lock until the Hub has closed its files.
 
         Args:
             model_name: Name of the model to download
@@ -256,7 +269,7 @@ class ModelManager:
             cancel_token: Token to cancel the download
 
         Returns:
-            True if successful, False if cancelled or failed
+            True if successful, False if cancelled. Download failures propagate.
         """
         from huggingface_hub import snapshot_download
         from tqdm import tqdm as tqdm_base
@@ -277,9 +290,6 @@ class ModelManager:
             "start_time": time.time(),
             "last_update_time": time.time()
         }
-
-        # Result holder for the download thread
-        result = {"success": False, "error": None, "model_path": None}
 
         def send_progress():
             """Send progress update to callback."""
@@ -383,64 +393,22 @@ class ModelManager:
                     progress_state["files_done"] = self._vf_n
                     send_progress()
 
-        def download_thread():
-            """Run the download in a separate thread."""
-            try:
-                # Send initial progress to confirm download started
-                log.info("Download thread started", model=model_name, repo_id=repo_id)
-                on_progress(DownloadProgress(
-                    model_name=model_name,
-                    percent=0.1,
-                    downloaded_bytes=0,
-                    total_bytes=total_size,
-                    speed_bps=0,
-                    eta_seconds=0
-                ))
-
-                # Use huggingface_hub directly with our custom tqdm for progress
-                model_path = snapshot_download(
-                    repo_id,
-                    tqdm_class=DownloadProgressBar,
-                )
-                result["success"] = True
-                result["model_path"] = model_path
-            except DownloadCancelledError:
-                # Expected when user cancels - not an error
-                log.info("Download thread cancelled", model=model_name)
-                result["error"] = "cancelled"
-            except Exception as e:
-                log.error("Download thread exception", error=str(e), model=model_name)
-                result["error"] = str(e)
-
-        # Start download in daemon thread
-        thread = threading.Thread(target=download_thread, daemon=True)
-        thread.start()
-
-        # Wait for completion while checking for cancellation
-        while thread.is_alive():
-            if cancel_token.is_cancelled():
-                log.info("Model download cancelled by user", model=model_name)
-                # Thread is daemon, so it will be abandoned when we return
-                return False
-            thread.join(timeout=0.1)  # Check every 100ms
-
-        # Check result
-        if result["success"]:
-            log.info("Model download completed", model=model_name, path=result["model_path"])
-
-            # Send final 100% progress
-            on_progress(DownloadProgress(
-                model_name=model_name,
-                percent=100.0,
-                downloaded_bytes=total_size,
-                total_bytes=total_size,
-                speed_bps=0,
-                eta_seconds=0
-            ))
-            return True
-        else:
-            log.error("Model download failed", model=model_name, error=result["error"])
+        on_progress(DownloadProgress(model_name, 0, 0, total_size, 0, 0))
+        if cancel_token.is_cancelled():
             return False
+        try:
+            model_path = snapshot_download(repo_id, tqdm_class=DownloadProgressBar)
+        except DownloadCancelledError:
+            return False
+
+        if cancel_token.is_cancelled():
+            return False
+        if not _has_model_files(model_path):
+            raise RuntimeError("The model download is incomplete. Retry to finish downloading it.")
+
+        log.info("Model download completed", model=model_name, path=model_path)
+        on_progress(DownloadProgress(model_name, 100, total_size, total_size, 0, 0))
+        return True
 
     # ------------------------------------------------------------------
     # Background download session (the RPC-facing surface)
@@ -465,10 +433,12 @@ class ModelManager:
                   {"success": True, "started": True} if a session started.
         """
         with self._session_lock:
-            # Cancel any in-flight session before starting a new one
-            if self._session is not None and not self._session["done"]:
+            current = self._session
+            if current is not None and not current["done"]:
+                if current["model"] == model_name and not current["token"].is_cancelled():
+                    return {"success": True, "started": True}
                 log.info("Cancelling previous download for new request")
-                self._session["token"].cancel()
+                current["token"].cancel()
 
             if self.is_model_cached(model_name):
                 log.info("Model already cached", model=model_name)
@@ -488,6 +458,7 @@ class ModelManager:
             }
 
             def on_progress(progress: DownloadProgress):
+                """Publish progress only while this session is current."""
                 payload = {
                     "model": progress.model_name,
                     "percent": progress.percent,
@@ -496,26 +467,24 @@ class ModelManager:
                     "speedBps": progress.speed_bps,
                     "etaSeconds": progress.eta_seconds
                 }
-                session["progress"] = payload
-                emit("download-progress", payload)
+                with self._session_lock:
+                    if self._session is session and not token.is_cancelled():
+                        session["progress"] = payload
+                        emit("download-progress", payload)
 
             def run():
+                """Publish the outcome once the transfer has released the cache."""
+                payload = {"model": model_name, "success": False}
                 try:
-                    success = self.download_model(model_name, on_progress, token)
-                    emit("download-complete", {
-                        "model": model_name,
-                        "success": success,
-                        "cancelled": token.is_cancelled()
-                    })
+                    payload["success"] = self.download_model(model_name, on_progress, token)
                 except Exception as e:
-                    log.error("Download thread error", error=str(e))
-                    emit("download-complete", {
-                        "model": model_name,
-                        "success": False,
-                        "error": str(e)
-                    })
-                finally:
+                    log.error("Model download failed", model=model_name, error=str(e))
+                    payload["error"] = str(e)
+                with self._session_lock:
                     session["done"] = True
+                    payload["cancelled"] = token.is_cancelled() and not payload["success"]
+                    if self._session is session:
+                        emit("download-complete", payload)
 
             session["thread"] = threading.Thread(target=run, daemon=True)
             self._session = session
@@ -542,7 +511,7 @@ class ModelManager:
         """
         with self._session_lock:
             session = self._session
-            if session is None or session["done"] or session["token"].is_cancelled():
+            if session is None or session["done"]:
                 return {"active": False, "model": None}
             progress = session["progress"] or {
                 "model": session["model"],
@@ -552,7 +521,7 @@ class ModelManager:
                 "speedBps": 0,
                 "etaSeconds": 0,
             }
-            return {"active": True, **progress}
+            return {"active": True, "cancelling": session["token"].is_cancelled(), **progress}
 
     def clear_cache(self) -> dict:
         """
@@ -572,9 +541,10 @@ class ModelManager:
         deleted_bytes = 0
         deleted_models = []
 
+        if not self._download_lock.acquire(blocking=False):
+            return {"success": False, "deleted_bytes": 0, "deleted_models": [], "error": _DOWNLOAD_BUSY}
         try:
-            # Get HuggingFace cache directory
-            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            cache_dir = Path(self.get_cache_dir())
 
             if not cache_dir.exists():
                 log.info("Cache directory does not exist, nothing to clear")
@@ -593,11 +563,10 @@ class ModelManager:
                 if model_cache_path.exists():
                     # Calculate size before deleting
                     size = sum(f.stat().st_size for f in model_cache_path.rglob("*") if f.is_file())
-                    deleted_bytes += size
-                    deleted_models.append(model_name)
-
                     log.info("Deleting model cache", model=model_name, path=str(model_cache_path), size_bytes=size)
                     shutil.rmtree(model_cache_path)
+                    deleted_bytes += size
+                    deleted_models.append(model_name)
 
             log.info("Model cache cleared",
                      deleted_count=len(deleted_models),
@@ -618,6 +587,8 @@ class ModelManager:
                 "deleted_models": deleted_models,
                 "error": str(e)
             }
+        finally:
+            self._download_lock.release()
 
     def delete_model(self, model_name: str) -> dict:
         """
@@ -644,8 +615,10 @@ class ModelManager:
 
         log.info("Deleting model", model=model_name)
 
+        if not self._download_lock.acquire(blocking=False):
+            return {"success": False, "deleted_bytes": 0, "deleted_model": None, "error": _DOWNLOAD_BUSY}
         try:
-            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            cache_dir = Path(self.get_cache_dir())
             model_cache_path = cache_dir / hf_cache_folder_name(repo_id)
 
             if not model_cache_path.exists():
@@ -676,6 +649,8 @@ class ModelManager:
                 "deleted_model": None,
                 "error": str(e),
             }
+        finally:
+            self._download_lock.release()
 
 
 # Singleton instance
