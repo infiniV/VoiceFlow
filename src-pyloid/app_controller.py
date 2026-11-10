@@ -31,8 +31,8 @@ class AppController:
             clipboard_service=self.clipboard_service,
             db=self.db,
             audio_service=self.audio_service,
-            is_model_loaded=lambda: self._model_loaded,
-            is_model_loading=lambda: self._model_loading,
+            is_model_loaded=lambda: self.transcription_service.get_current_model() is not None,
+            is_model_loading=self.transcription_service.is_loading,
         )
 
         # Meetings feature — its own self-contained controller. Constructed
@@ -49,10 +49,6 @@ class AppController:
                 else None
             ),
         )
-
-        # Model loading state
-        self._model_loaded = False
-        self._model_loading = False
 
         # Shutdown is wired from both QApplication.aboutToQuit and the
         # post-app.run() path in main.py; this guard makes a second call a
@@ -117,18 +113,15 @@ class AppController:
 
         # Load whisper model in background
         def load_model():
-            self._model_loading = True
+            """Load the configured model and report startup errors to the UI."""
             try:
                 info(f"Loading model: {settings.model} on device: {settings.device}...")
                 self.transcription_service.load_model(settings.model, settings.device)
-                self._model_loaded = True
                 info("Model loaded successfully!")
             except Exception as e:
                 exception(f"Failed to load model: {e}")
                 if self._on_error:
                     self._on_error(f"Failed to load model: {e}")
-            finally:
-                self._model_loading = False
 
         threading.Thread(target=load_model, daemon=True).start()
 
@@ -230,6 +223,7 @@ class AppController:
         # load_model itself serializes and short-circuits redundant loads.
         if "model" in mapped or "device" in mapped:
             def reload():
+                """Load the latest model and device settings on the worker."""
                 latest = self.settings_service.get_settings()
                 self.transcription_service.load_model(latest.model, latest.device)
             threading.Thread(target=reload, daemon=True).start()

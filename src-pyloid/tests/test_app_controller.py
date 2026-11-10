@@ -1,6 +1,7 @@
 import pytest
 from pathlib import Path
 import tempfile
+from unittest.mock import Mock, patch
 from app_controller import AppController, get_controller
 
 
@@ -79,6 +80,31 @@ class TestAppController:
 
         assert settings["autoStart"] == False
         assert settings["onboardingComplete"] == True
+
+    def test_first_settings_reload_enables_dictation(self, temp_db, tmp_path, monkeypatch):
+        """A model downloaded after startup becomes ready without restarting."""
+        from services.database import DatabaseService
+
+        monkeypatch.setattr("app_controller.DatabaseService", lambda: DatabaseService(temp_db))
+        monkeypatch.setattr("app_controller.MeetingsController", Mock())
+        ctrl = AppController()
+        assert ctrl.dictation.wait_for_model() == "absent"
+
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        (tmp_path / "model.bin").write_bytes(b"weights")
+        with patch("huggingface_hub.snapshot_download", return_value=str(tmp_path)), \
+             patch("services.transcription.WhisperModel") as whisper:
+            with pytest.raises(FileNotFoundError, match="incomplete"):
+                ctrl.transcription_service.load_model("tiny", "cpu")
+            whisper.assert_not_called()
+
+            (tmp_path / "tokenizer.json").write_text("{}", encoding="utf-8")
+            with patch("app_controller.threading.Thread") as thread:
+                ctrl.update_settings(model="tiny", device="cpu")
+                thread.call_args.kwargs["target"]()
+
+            whisper.assert_called_once_with(str(tmp_path), device="cpu", compute_type="int8", local_files_only=True)
+        assert ctrl.dictation.wait_for_model() == "ready"
 
     def test_get_history_returns_list(self, controller):
         """get_history returns a list."""

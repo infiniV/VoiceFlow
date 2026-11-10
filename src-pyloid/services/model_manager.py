@@ -34,11 +34,12 @@ from services.model_catalog import (
 
 log = get_logger("model")
 
-_REQUIRED_MODEL_FILES = ("config.json", "model.bin")
+_REQUIRED_MODEL_FILES = ("config.json", "model.bin", "tokenizer.json")
 _DOWNLOAD_BUSY = "A model download is still running. Cancel it and wait for it to stop before deleting cached files."
 
 
 def _has_model_files(snapshot: str) -> bool:
+    """Check that the files needed for offline loading are present and nonempty."""
     path = Path(snapshot)
     return all((path / name).is_file() and (path / name).stat().st_size > 0
                for name in _REQUIRED_MODEL_FILES)
@@ -193,14 +194,20 @@ class ModelManager:
             True if the model is cached, False otherwise.
         """
         try:
-            from huggingface_hub import snapshot_download
-
-            repo_id = _get_repo_id(model_name)
-            # Try to get model path with local_files_only - raises if not cached
-            return _has_model_files(snapshot_download(repo_id, local_files_only=True))
+            self.get_cached_model_path(model_name)
+            return True
         except Exception:
             # Model not found in cache
             return False
+
+    def get_cached_model_path(self, model_name: str) -> str:
+        """Resolve a complete local snapshot without initiating a download."""
+        from huggingface_hub import snapshot_download
+
+        snapshot = snapshot_download(_get_repo_id(model_name), local_files_only=True)
+        if not _has_model_files(snapshot):
+            raise FileNotFoundError(f"The cached {model_name} model is incomplete. Retry the download.")
+        return snapshot
 
     def get_model_info(self, model_name: str) -> ModelInfo:
         """
@@ -262,7 +269,7 @@ class ModelManager:
             cancel_token: Token to cancel the download
 
         Returns:
-            True if successful, False if cancelled or failed
+            True if successful, False if cancelled. Download failures propagate.
         """
         from huggingface_hub import snapshot_download
         from tqdm import tqdm as tqdm_base
@@ -451,6 +458,7 @@ class ModelManager:
             }
 
             def on_progress(progress: DownloadProgress):
+                """Publish progress only while this session is current."""
                 payload = {
                     "model": progress.model_name,
                     "percent": progress.percent,
@@ -465,6 +473,7 @@ class ModelManager:
                         emit("download-progress", payload)
 
             def run():
+                """Publish the outcome once the transfer has released the cache."""
                 payload = {"model": model_name, "success": False}
                 try:
                     payload["success"] = self.download_model(model_name, on_progress, token)

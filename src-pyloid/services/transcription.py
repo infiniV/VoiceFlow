@@ -7,7 +7,7 @@ import numpy as np
 from faster_whisper import WhisperModel
 
 from services.logger import get_logger
-from services.model_catalog import get_repo_id
+from services.model_manager import get_model_manager
 from services.gpu import resolve_device, get_compute_type
 
 log = get_logger("model")
@@ -59,9 +59,9 @@ class TranscriptionService:
                 and self._model is not None):
                 return  # Already loaded with same config
 
+            model_path = get_model_manager().get_cached_model_path(model_name)
             self._loading = True
             try:
-                repo_id = get_repo_id(model_name)
                 log.info(
                     "Loading model",
                     model=model_name,
@@ -69,7 +69,7 @@ class TranscriptionService:
                     compute_type=compute_type
                 )
                 self._model = WhisperModel(
-                    repo_id,
+                    model_path,
                     device=device,
                     compute_type=compute_type,
                     local_files_only=True,
@@ -84,7 +84,7 @@ class TranscriptionService:
                 if device == "cuda":
                     log.warning("CUDA load failed, falling back to CPU")
                     self._model = WhisperModel(
-                        repo_id,
+                        model_path,
                         device="cpu",
                         compute_type="int8",
                         local_files_only=True,
@@ -153,8 +153,8 @@ class TranscriptionService:
             if "not found or cannot be loaded" in str(e) and self._current_device == "cuda":
                 log.warning("CUDA runtime error during transcription, reloading on CPU", error=str(e))
                 model_name = self._current_model_name
-                repo_id = get_repo_id(model_name)
-                self._model = WhisperModel(repo_id, device="cpu", compute_type="int8", local_files_only=True)
+                model_path = get_model_manager().get_cached_model_path(model_name)
+                self._model = WhisperModel(model_path, device="cpu", compute_type="int8", local_files_only=True)
                 self._current_device = "cpu"
                 self._current_compute_type = "int8"
                 log.info("Model reloaded on CPU fallback")

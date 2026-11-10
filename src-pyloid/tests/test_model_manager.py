@@ -153,10 +153,13 @@ class TestModelManager:
         assert result is False
 
     def test_partial_snapshot_is_not_cached(self, model_manager, tmp_path):
+        """Weights alone cannot make a snapshot ready for offline transcription."""
         (tmp_path / "config.json").write_text("{}", encoding="utf-8")
         with patch("huggingface_hub.snapshot_download", return_value=str(tmp_path)):
             assert not model_manager.is_model_cached("tiny")
             (tmp_path / "model.bin").write_bytes(b"weights")
+            assert not model_manager.is_model_cached("tiny")
+            (tmp_path / "tokenizer.json").write_text("{}", encoding="utf-8")
             assert model_manager.is_model_cached("tiny")
 
     def test_get_model_info_returns_model_info(self, model_manager):
@@ -589,6 +592,7 @@ class TestDownloadSession:
         assert manager.cancel_download() == {"success": True, "cancelled": False}
 
     def test_cancel_waits_for_hub_before_cache_can_be_deleted(self, manager, tmp_path, monkeypatch):
+        """Protect the partial file until the cancelled Hub call returns."""
         import threading
 
         entered = threading.Event()
@@ -600,6 +604,7 @@ class TestDownloadSession:
         monkeypatch.setattr(manager, "get_cache_dir", lambda: str(tmp_path))
 
         def snapshot(*args, **kwargs):
+            """Simulate a transfer still holding the cache after cancellation."""
             if kwargs.get("local_files_only"):
                 return str(cache)
             entered.set()
@@ -609,6 +614,7 @@ class TestDownloadSession:
         events = []
 
         def emit(name, payload):
+            """Capture the session result and signal that the worker finished."""
             events.append((name, payload))
             if name == "download-complete":
                 finished.set()
@@ -644,6 +650,7 @@ class TestDeleteModel:
 
     @pytest.fixture(autouse=True)
     def isolated_cache(self, tmp_path, monkeypatch):
+        """Keep cache deletion tests isolated from installed models."""
         monkeypatch.setattr("huggingface_hub.constants.HF_HUB_CACHE", tmp_path / ".cache/huggingface/hub")
 
     def _make_cached(self, home: Path, model_name: str, size: int = 4096) -> Path:
