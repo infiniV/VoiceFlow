@@ -6,6 +6,7 @@ import type { DownloadProgress, DownloadComplete } from "@/lib/types";
 export type DownloadState =
   | "idle"
   | "downloading"
+  | "cancelling"
   | "completed"
   | "cancelled"
   | "error";
@@ -73,14 +74,10 @@ export function useModelDownload(
   const start = useCallback(async () => {
     try {
       setError(null);
+      setState("downloading");
+      onStart?.();
       const result = await api.startModelDownload(modelName);
-      if (result.alreadyCached) {
-        setState("completed");
-        onComplete?.(true);
-      } else {
-        setState("downloading");
-        onStart?.();
-      }
+      if (!result.success) throw new Error("Failed to start download");
     } catch (err) {
       setState("error");
       setError(err instanceof Error ? err.message : "Failed to start download");
@@ -91,8 +88,10 @@ export function useModelDownload(
 
   const cancel = useCallback(async () => {
     try {
-      await api.cancelModelDownload();
-      // State transitions on the download-complete (cancelled) event.
+      const result = await api.cancelModelDownload();
+      if (result.cancelled) {
+        setState((current) => current === "downloading" ? "cancelling" : current);
+      }
     } catch (err) {
       console.error("Failed to cancel download:", err);
     }
@@ -121,7 +120,7 @@ export function useModelDownload(
       try {
         const status = await api.getDownloadStatus();
         if (status.active && status.model === modelName) {
-          setState("downloading");
+          setState(status.cancelling ? "cancelling" : "downloading");
           setProgress({
             model: modelName,
             percent: status.percent ?? 0,

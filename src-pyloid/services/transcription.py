@@ -72,6 +72,7 @@ class TranscriptionService:
                     repo_id,
                     device=device,
                     compute_type=compute_type,
+                    local_files_only=True,
                 )
                 self._current_model_name = model_name
                 self._current_device = device
@@ -86,6 +87,7 @@ class TranscriptionService:
                         repo_id,
                         device="cpu",
                         compute_type="int8",
+                        local_files_only=True,
                     )
                     self._current_model_name = model_name
                     self._current_device = "cpu"
@@ -152,7 +154,7 @@ class TranscriptionService:
                 log.warning("CUDA runtime error during transcription, reloading on CPU", error=str(e))
                 model_name = self._current_model_name
                 repo_id = get_repo_id(model_name)
-                self._model = WhisperModel(repo_id, device="cpu", compute_type="int8")
+                self._model = WhisperModel(repo_id, device="cpu", compute_type="int8", local_files_only=True)
                 self._current_device = "cpu"
                 self._current_compute_type = "int8"
                 log.info("Model reloaded on CPU fallback")
